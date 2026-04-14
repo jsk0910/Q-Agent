@@ -1,0 +1,186 @@
+/* =====================================================
+   Q-Agent Global Styles
+   Perplexity-inspired dark UI with customization system
+   ===================================================== */
+
+/* ---------- CSS Custom Properties (Theming) ---------- */
+:root {
+  /* === Spacing & Layout === */
+  --sidebar-width: 260px;
+  --topbar-height: 52px;
+  --input-bar-height: 72px;
+  --border-radius-sm: 8px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 18px;
+  --border-radius-xl: 24px;
+
+  /* === Typography === */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  --font-size-xs: 0.72rem;
+  --font-size-sm: 0.825rem;
+  --font-size-base: 0.9375rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+
+  /* === Animation === */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- Dark Theme (Default) ---------- */
+[data-theme="dark"], :root {
+  /* Backgrounds */
+  --bg-app:      #0c0c0d;
+  --bg-sidebar:  #111113;
+  --bg-surface:  #18181b;
+  --bg-elevated: #1e1e22;
+  --bg-overlay:  #252529;
+  --bg-input:    #16161a;
+
+  /* Borders */
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-default: rgba(255,255,255,0.10);
+  --border-strong:  rgba(255,255,255,0.18);
+
+  /* Text */
+  --text-primary:   #f0f0f2;
+  --text-secondary: #9c9ca0;
+  --text-tertiary:  #5c5c62;
+  --text-link:      #20d9d2;
+
+  /* Accent — Teal (Perplexity-like) */
+  --accent-primary:   #20d9d2;
+  --accent-secondary: #1ab8b2;
+  --accent-dim:       rgba(32, 217, 210, 0.12);
+  --accent-glow:      rgba(32, 217, 210, 0.25);
+
+  /* Thinking panel */
+  --thinking-bg:     rgba(255, 180, 0, 0.06);
+  --thinking-border: rgba(255, 180, 0, 0.25);
+  --thinking-text:   #c8a84b;
+
+  /* Status */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error:   #ef4444;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.6);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.7);
+  --shadow-input: 0 0 0 2px var(--accent-dim), 0 4px 20px rgba(0,0,0,0.4);
+}
+
+/* ---------- Light Theme ---------- */
+[data-theme="light"] {
+  --bg-app:      #fafafa;
+  --bg-sidebar:  #f4f4f5;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #f8f8f9;
+  --bg-overlay:  #efefef;
+  --bg-input:    #ffffff;
+
+  --border-subtle:  rgba(0,0,0,0.05);
+  --border-default: rgba(0,0,0,0.09);
+  --border-strong:  rgba(0,0,0,0.15);
+
+  --text-primary:   #111113;
+  --text-secondary: #52525b;
+  --text-tertiary:  #a1a1aa;
+  --text-link:      #0891b2;
+
+  --accent-primary:   #0891b2;
+  --accent-secondary: #0e7490;
+  --accent-dim:       rgba(8, 145, 178, 0.10);
+  --accent-glow:      rgba(8, 145, 178, 0.20);
+
+  --thinking-bg:     rgba(234, 179, 8, 0.08);
+  --thinking-border: rgba(234, 179, 8, 0.30);
+  --thinking-text:   #92400e;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+  --shadow-input: 0 0 0 2px var(--accent-dim), 0 4px 20px rgba(0,0,0,0.08);
+}
+
+/* ---------- Oled Theme ---------- */
+[data-theme="oled"] {
+  --bg-app:      #000000;
+  --bg-sidebar:  #080808;
+  --bg-surface:  #0e0e0e;
+  --bg-elevated: #141414;
+  --bg-overlay:  #1a1a1a;
+  --bg-input:    #0a0a0a;
+
+  --border-subtle:  rgba(255,255,255,0.04);
+  --border-default: rgba(255,255,255,0.08);
+  --border-strong:  rgba(255,255,255,0.14);
+
+  --text-primary:   #ffffff;
+  --text-secondary: #888;
+  --text-tertiary:  #444;
+  --text-link:      #20d9d2;
+
+  --accent-primary:   #20d9d2;
+  --accent-secondary: #1ab8b2;
+  --accent-dim:       rgba(32, 217, 210, 0.10);
+  --accent-glow:      rgba(32, 217, 210, 0.20);
+
+  --thinking-bg:     rgba(255, 180, 0, 0.05);
+  --thinking-border: rgba(255, 180, 0, 0.20);
+  --thinking-text:   #b8972e;
+
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.8);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.9);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,1);
+  --shadow-input: 0 0 0 2px var(--accent-dim), 0 4px 24px rgba(0,0,0,0.6);
+}
+
+/* ---------- Reset & Base ---------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ---------- Utility Classes ---------- */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Accent Color Vars (for customization) ---------- */
+/* These can be overridden per user setting via JS */
+.accent-teal   { --accent-primary: #20d9d2; --accent-secondary: #1ab8b2; }
+.accent-violet { --accent-primary: #a78bfa; --accent-secondary: #8b5cf6; }
+.accent-orange { --accent-primary: #fb923c; --accent-secondary: #f97316; }
+.accent-green  { --accent-primary: #4ade80; --accent-secondary: #22c55e; }
+.accent-pink   { --accent-primary: #f472b6; --accent-secondary: #ec4899; }

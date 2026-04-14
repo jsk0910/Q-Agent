@@ -1,0 +1,12 @@
+[[permission]]
+identifier = "allow-app-commands"
+description = "Allows calling custom backend commands"
+
+[permission.commands]
+allow = [
+  "chat_with_ollama",
+  "list_models",
+  "add_source",
+  "get_sources",
+  "intercept_and_route"
+]
