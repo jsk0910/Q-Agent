@@ -1,5 +1,7 @@
 // UI customization store
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
+import { profileStore } from './profile';
+import { modeStore } from './mode';
 
 export type Theme = 'dark' | 'light' | 'oled';
 export type AccentColor = 'teal' | 'violet' | 'orange' | 'green' | 'pink';
@@ -14,9 +16,7 @@ export interface UISettings {
   sendOnEnter: boolean;
   showThinking: boolean;
   streamTokens: boolean;
-  modelName: string;
   temperature: number;
-  systemPrompt: string;
 }
 
 const defaultSettings: UISettings = {
@@ -27,9 +27,7 @@ const defaultSettings: UISettings = {
   sendOnEnter: true,
   showThinking: true,
   streamTokens: true,
-  modelName: 'qwen3.5:4b',
   temperature: 0.7,
-  systemPrompt: 'You are Q-Agent, a helpful AI research and development assistant.',
 };
 
 // Load from localStorage if available
@@ -72,6 +70,20 @@ function createSettingsStore() {
 }
 
 export const settings = createSettingsStore();
+
+// Derived store to get the "Effective Settings" combining UI global settings and Profile-specific ones
+export const effectiveSettings = derived(
+  [settings, profileStore, modeStore],
+  ([$settings, $profile, $mode]) => {
+    const activeProfile = $profile.profiles.find(p => p.id === $profile.activeId);
+    return {
+      ...$settings,
+      theme: (activeProfile?.theme as Theme) || $settings.theme,
+      modelName: activeProfile?.mode_models[$mode] || activeProfile?.mode_models.default || 'qwen3.5:4b',
+      systemPrompt: activeProfile?.system_prompts[$mode] || 'You are Q-Agent, a helpful AI research and development assistant.'
+    };
+  }
+);
 
 // Chat history
 export interface Message {

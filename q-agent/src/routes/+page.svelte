@@ -6,10 +6,14 @@
   import hljs from 'highlight.js';
   import 'highlight.js/styles/github-dark.css';
   import { onMount, tick } from 'svelte';
-  import { settings, chatStore, activeConversation } from '$lib/stores/ui';
+  import { settings, chatStore, activeConversation, effectiveSettings } from '$lib/stores/ui';
   import type { Message } from '$lib/stores/ui';
+  import { modeStore } from '$lib/stores/mode';
+  import { profileStore } from '$lib/stores/profile';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import WidgetPanel from '$lib/components/WidgetPanel.svelte';
+  import ModelPicker from '$lib/components/ModelPicker.svelte';
+  import ModelInstallModal from '$lib/components/ModelInstallModal.svelte';
 
   // ─── Marked setup ────────────────────────────────────────────────────────
   const renderer = new marked.Renderer();
@@ -43,6 +47,7 @@
   let widgetActiveTab = $state<'sources' | 'settings' | 'references'>('sources');
   let chatEndEl = $state<HTMLDivElement>();
   let textareaEl = $state<HTMLTextAreaElement>();
+  let installModel = $state<string | null>(null);
 
   let currentConv = $derived($activeConversation);
   let messages = $derived(currentConv?.messages ?? []);
@@ -149,7 +154,7 @@
       content: '',
       thinking: undefined,
       timestamp: new Date(),
-      model: $settings.modelName,
+      model: $effectiveSettings.modelName,
     };
     chatStore.addMessage(convId, asstPlaceholder);
 
@@ -167,7 +172,7 @@
     }
     
     chatStore.updateMessage(convId, asstId, { content: "" });
-    const finalSystemPrompt = $settings.systemPrompt + (contextStr ? "\n\n" + contextStr : "");
+    const finalSystemPrompt = $effectiveSettings.systemPrompt + (contextStr ? "\n\n" + contextStr : "");
 
     let unlistenToken: UnlistenFn | undefined;
     let unlistenFinished: UnlistenFn | undefined;
@@ -193,7 +198,7 @@
 
       const raw: string = await invoke('chat_with_ollama', {
         messages: historyToSend,
-        model: $settings.modelName,
+        model: $effectiveSettings.modelName,
         temperature: $settings.temperature,
         systemPrompt: finalSystemPrompt,
         stream: $settings.streamTokens
@@ -308,13 +313,7 @@
     <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-left">
-        <span class="model-chip" id="model-chip">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3"/>
-          </svg>
-          {$settings.modelName}
-        </span>
+        <ModelPicker onrequestInstall={m => installModel = m} />
         {#if messages.length > 0}
           <span class="token-chip" title="Estimated Tokens">
             {totalTokens} tokens
@@ -383,7 +382,7 @@
           <div class="welcome-icon">⬡</div>
           <h1 class="welcome-title">How can I help you?</h1>
           <p class="welcome-sub">
-            Powered by <strong>{$settings.modelName}</strong> — Ask anything, research papers, write code.
+            Powered by <strong>{$effectiveSettings.modelName}</strong> — Ask anything, research papers, write code.
           </p>
           <div class="quick-prompts">
             {#each [
@@ -544,6 +543,17 @@
     mode={layoutMode}
     onclose={() => widgetPanelOpen = false} 
   />
+
+  {#if installModel}
+    <ModelInstallModal 
+      model={installModel} 
+      onclose={() => installModel = null}
+      onsuccess={(m) => {
+        profileStore.setModelForMode($modeStore, m);
+        installModel = null;
+      }}
+    />
+  {/if}
 </div>
 
 <style>

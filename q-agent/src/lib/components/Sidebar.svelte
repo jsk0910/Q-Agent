@@ -1,5 +1,6 @@
-<script lang="ts">
   import { chatStore, settings } from '$lib/stores/ui';
+  import { modeStore, MODES } from '$lib/stores/mode';
+  import ProfileSwitcher from './ProfileSwitcher.svelte';
 
   let { onSettingsOpen } = $props();
 
@@ -42,7 +43,6 @@
       <div class="brand">
         <span class="brand-icon">⬡</span>
         <span class="brand-name">Q-Agent</span>
-        <span class="brand-badge">4B</span>
       </div>
     {/if}
     <button
@@ -61,6 +61,27 @@
       </svg>
     </button>
   </div>
+
+  {#if !collapsed}
+    <ProfileSwitcher />
+  {/if}
+
+  <!-- Mode Selector -->
+  {#if !collapsed}
+    <div class="mode-tabs">
+      {#each MODES as mode}
+        <button 
+          class="mode-tab" 
+          class:active={$modeStore === mode.id}
+          onclick={() => modeStore.set(mode.id)}
+          title={mode.description}
+        >
+          <span class="mode-icon">{mode.icon}</span>
+          <span class="mode-label">{mode.label}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   <!-- New Chat Button -->
   <div class="sidebar-actions">
@@ -251,6 +272,48 @@
     background: rgba(32, 217, 210, 0.18);
     box-shadow: 0 0 12px var(--accent-glow);
   }
+
+  /* Mode Selector */
+  .mode-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 10px;
+    background: var(--bg-surface);
+    margin: 8px 10px;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .mode-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mode-tab:hover {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  .mode-tab.active {
+    background: var(--bg-app);
+    color: var(--accent-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .mode-icon { font-size: 1.1rem; }
+  .mode-label { font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
   /* Conversation List */
   .conv-list {
