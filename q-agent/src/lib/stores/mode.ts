@@ -16,28 +16,28 @@ export const MODES: ModeInfo[] = [
     label: 'Default',
     icon: '🤖',
     description: 'General purpose assistant for daily tasks.',
-    recommendedModels: ['qwen3.5:4b', 'llama3.2:3b']
+    recommendedModels: ['qwen3.5:4b', 'llama3.2:3b', 'llama3.2:1b']
   },
   {
     id: 'academic',
     label: 'Academic',
     icon: '📖',
     description: 'Literature review, paper summary, and citations.',
-    recommendedModels: ['gemma3:4b', 'phi-4']
+    recommendedModels: ['gemma3:4b', 'phi-4', 'gemma3:12b']
   },
   {
     id: 'coding',
     label: 'Coding',
     icon: '💻',
     description: 'Code generation, debugging, and review.',
-    recommendedModels: ['qwen2.5-coder:7b', 'deepseek-coder:6.7b']
+    recommendedModels: ['qwen2.5-coder:7b', 'deepseek-coder:6.7b', 'deepseek-coder-v2:16b']
   },
   {
     id: 'finance',
     label: 'Finance',
     icon: '📈',
     description: 'Financial news, stock analysis, and charts.',
-    recommendedModels: ['qwen3.5:4b']
+    recommendedModels: ['qwen3.5:4b', 'llama3.2:3b']
   },
   {
     id: 'custom',

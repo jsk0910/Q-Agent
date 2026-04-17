@@ -1,6 +1,8 @@
+<script lang="ts">
   import { chatStore, settings } from '$lib/stores/ui';
   import { modeStore, MODES } from '$lib/stores/mode';
   import ProfileSwitcher from './ProfileSwitcher.svelte';
+  import ProjectSwitcher from './ProjectSwitcher.svelte';
 
   let { onSettingsOpen } = $props();
 
@@ -64,6 +66,7 @@
 
   {#if !collapsed}
     <ProfileSwitcher />
+    <ProjectSwitcher />
   {/if}
 
   <!-- Mode Selector -->

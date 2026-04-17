@@ -104,7 +104,7 @@ impl ModelRunner for OllamaRunner {
         Ok(body.models.into_iter().map(|m| m.name).collect())
     }
 
-    async fn pull_model(&self, model: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn pull_model(&self, _model: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
         // Implement in refactored chat.rs for better streaming handle, 
         // or add a progress callback to this trait eventually.
         Ok(())

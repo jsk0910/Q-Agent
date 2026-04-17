@@ -1,35 +1,23 @@
 # Q-Agent — Project Plan
 > **Core Engine**: Ollama + Qwen 3.5 4B (Local) · **Stack**: Tauri 2.0 / SvelteKit 5 / Rust
-> **Last Updated**: 2026-04-13 (Phase 1 완료, Phase 2 RAG 진행 중)
+> **Last Updated**: 2026-04-15 (SLM Intelligent Harness 패러다임 추가)
 
 ---
 
-## 📍 현재 상태 요약 (2026-04-13 기준)
+## 📍 현재 상태 요약 (2026-04-17 기준)
 
-### ✅ 완료된 것들
+### ✅ 완료된 핵심 기능
 
 | 항목 | 세부 내용 |
 |---|---|
-| 프로젝트 스캐폴딩 | Tauri 2.0 + SvelteKit 5 + TypeScript + Runes (v5) |
-| Ollama 연동 | `/api/chat` 및 스트리밍(`chat_token`) 지원 |
-| 마크다운 렌더링 | `marked v18` + `highlight.js` (Copy 버튼 포함) |
-| **GUI 재설계** | Integrated vs Overlay 듀얼 모드 Widget Panel |
-| **CSS 토큰 시스템** | Dark / Light / OLED 테마 + 5가지 Accent 컬러 |
-| **UI Store** | Svelte 5 Runes 기반 영속적 설정 및 채팅 이력 |
-| **Agentic Routing** | LLM 기반 쿼리 라우팅 (Local / Web / Internal) |
-| **Web Search** | DuckDuckGo 연동 실시간 정보 수집 |
-| **Welcome 화면** | Quick Prompts, 타이핑 애니메이션, 글로우 효과 |
-| **입력창** | 자동 높이 조절, 단축키 지원 (Ctrl+N, Ctrl+,) |
+| **Intelligent Harness** | Context Builder, Eval-Loop, Router 등 SLM 최적화 루프 구현 완료 |
+| **Project Isolation** | 프로젝트 단위 컨텍스트/RAG 격리 및 활성 프로젝트 스위칭 안정화 |
+| **Inline Model Selector** | 실시간 모델 설치(`pull`), 프로필 기반 모델 매핑 및 영속화 |
+| **Agentic Routing** | LLM 기반 의도 분석 및 도구(Web/Internal/RAG) 동적 라우팅 |
+| **Web Search** | DuckDuckGo 연동 및 실시간 웹 정보 컨텍스트 주입 |
+| **GUI/UX 시스템** | Svelte 5 Runes 기반 듀얼 모드 위젯 패널, 테마 엔진, 타이핑 애니메이션 |
+| **Core Architecture** | Tauri 2.0 / Rust 기반의 모듈화된 명령 구조 및 에러 핸들링 |
 
-### ⚠️ 당장 고쳐야 할 사항 (Phase 1 버그/미완)
-
-| 우선순위 | 항목 | 이유 |
-|---|---|---|
-| 🔴 CRITICAL | **임베딩 최적화** | 대용량 PDF 로딩 시 속도 저하 개선 필요 |
-| 🔴 HIGH | **RAG 인용 UI** | 답변 내 [Source N] 클릭 시 해당 소스 하이라이트 |
-| 🟡 MEDIUM | **대화 Export 기능 확장** | PDF/HTML 내보내기 추가 |
-| 🟡 MEDIUM | **반응형 레이아웃** | 모바일/소형 창에서의 측면 패널 동작 최적화 |
-| 🟢 LOW | **다국어 지원** | i18n 적용 (한국어/영어) |
 
 ---
 
@@ -62,6 +50,24 @@
 
 ---
 
+### 🔴 Phase 0 — 전체 점검 및 안정화 (Full System Audit & Stabilization) `[진행 중]`
+
+**목표**: Phase 2.5까지 구현된 핵심 기능들의 정합성을 전수 점검하고, 잠재적 버그 및 미진한 구현부를 수정하여 프로덕션급 안정성 확보.
+
+#### 작업 목록 (긴급 수정 사항 포함)
+- [ ] 🔴 **[BUG] 프로젝트 생성 기능 오작동**: 프로젝트 생성 명령 실행 시 정상적으로 저장되지 않는 문제 해결.
+- [ ] 🔴 **[BUG] 모델 다운로드 에러**: `pull` 명령 부재 에러 (`pull` API 매핑 및 상태 처리 확인).
+- [ ] 🔴 **[BUG] 인라인 모델 선택기 제한**: 대화 창 내 모델 선택 시 전체 목록이 아닌 일부만 노출되는 필터링 로직 수정.
+- [ ] **회귀 테스트**: 프로젝트 생성, 모델 설치, 채팅, RAG 인용, 웹 검색 등 주요 경로 전수 점검.
+- [ ] **Harness 신뢰도 검증**: `ContextBuilder`의 토큰 계산 및 트런케이션 로직 정밀도 확인.
+- [ ] **Eval-Loop 최적화**: 다단계 추론 시의 레이턴시 측정 및 수렴 실패 케이스 방어 로직 강화.
+- [ ] **RAG 파이프라인 강화**: 대용량 문서 파싱 시의 병목 구간 개선 및 임베딩 처리 속도 최적화.
+- [ ] **데이터 영속화 점검**: 프로젝트/프로필 데이터의 UI-Backend 간 상태 불일치 및 저장 누락 해결.
+- [ ] **UI/UX 폴리싱**: 반응형 레이아웃 결함, 애니메이션 끊김, 미흡한 다국어 처리 및 접근성 개선.
+
+
+---
+
 ### 🟢 Phase 1 — Base UI & Ollama Integration `[완료]`
 
 #### 완료
@@ -82,38 +88,461 @@
 
 ---
 
-### 🟡 Phase 2 — SurrealDB RAG & Agentic Routing `[진행 중 — 40% 완료]`
+### 🧠 Phase 2 — SLM Intelligent Harness & RAG `[진행 중]`
 
-**목표**: 로컬 Knowledge Base 구축 및 인텔리전트 라우팅 — 정보 수집 후 답변 생성
+> **목표**: 로컬 Knowledge Base 고도화 및 인텔리전트 하니스 구축. 
+> Qwen 3.5 4B의 약점을 보완하기 위해 Rust 백엔드가 컨텍스트를 조립하고 출력을 검증하는 소프트웨어 계층을 완성합니다.
 
-#### 작업 목록
-- [x] SurrealDB Embedded 연동 (`kv-rocksdb`)
-- [x] LLM 기반 쿼리 라우터 (`intercept_and_route`)
-- [x] DuckDuckGo 웹 검색 연동 및 컨텍스트 주입
-- [x] Ollama `nomic-embed-text` 기반 벡터 임베딩 파이프라인
-- [x] 벡터 유사도 검색 (코사인) → Top-K 추출
-- [ ] PDF 업로드 및 텍스트 청크화 고도화
-- [ ] Knowledge Base UI (`/knowledge` 패널) 개선
-- [ ] 논문 인용 그래프 시각화 (D3.js)
+---
 
-#### 핵심 스키마
-```sql
-DEFINE TABLE paper SCHEMAFULL;
-DEFINE FIELD title ON paper TYPE string;
-DEFINE FIELD embedding ON paper TYPE array;
-DEFINE FIELD arxiv_id ON paper TYPE string;
+#### 패러다임 1 — Intelligent Harness & Context Separation (Storage vs. View)
 
-DEFINE TABLE chunk SCHEMAFULL;
-DEFINE FIELD content ON chunk TYPE string;
-DEFINE FIELD embedding ON chunk TYPE array;
+**개념**: LLM에게 날것의 채팅 히스토리나 RAG 청크를 그대로 먹이지 않는다.
 
-DEFINE TABLE cites SCHEMAFULL;     -- paper -> paper
-DEFINE TABLE contains SCHEMAFULL; -- paper -> chunk
+| 레이어 | 역할 | 구현체 |
+|---|---|---|
+| **Storage** | 모든 원시 로그·툴 출력·전체 히스토리 보존 | SurrealDB |
+| **Harness** | 매 턴마다 최소·최적화된 Working Context를 동적으로 조립 | Rust Backend |
+| **View (Working Context)** | LLM이 실제로 보는 컨텍스트 (오래된 메시지 트런케이트, 필수 상태만 포함) | 조립된 `WorkingContext` struct |
+
+##### 핵심 Rust 구조체
+
+```rust
+// src-tauri/src/harness/context.rs
+
+/// LLM에 실제로 전달되는 최적화된 뷰 (Working Context)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkingContext {
+    /// 시스템 프롬프트 (동적으로 조립된 가이드라인 포함)
+    pub system_prompt: String,
+    /// 트런케이트된 대화 히스토리 (최근 N턴만 포함)
+    pub messages: Vec<ContextMessage>,
+    /// 현재 턴에 주입된 RAG 청크 (프로젝트 격리됨)
+    pub rag_chunks: Vec<RagChunk>,
+    /// 현재 턴에 주입된 웹 검색 결과 (필요 시)
+    pub web_results: Option<Vec<WebSnippet>>,
+    /// 조립 메타데이터 (디버깅·로깅용)
+    pub meta: ContextMeta,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMessage {
+    pub role: MessageRole,
+    pub content: String,
+    /// 이 메시지의 SurrealDB record ID (원본 추적용)
+    pub source_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessageRole { System, User, Assistant, Tool }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RagChunk {
+    pub content: String,
+    pub score: f32,
+    pub source_title: String,
+    pub source_id: String,
+    /// 어느 프로젝트에서 왔는지
+    pub project_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMeta {
+    pub total_tokens_estimated: u32,
+    pub messages_truncated: u32,
+    pub guidelines_injected: Vec<String>,
+    pub project_id: String,
+    pub turn_id: String,
+}
+
+/// Working Context를 조립하는 빌더 trait
+pub trait ContextBuilder: Send + Sync {
+    async fn build(
+        &self,
+        user_message: &str,
+        project: &Project,
+        history: &[StoredMessage],
+        guidelines: &[GuidelineCard],
+    ) -> Result<WorkingContext, HarnessError>;
+}
+
+/// 기본 구현: 토큰 예산 초과 시 오래된 메시지부터 트런케이트
+pub struct AdaptiveContextBuilder {
+    pub max_context_tokens: u32,
+    pub min_history_turns: usize,
+    pub embedder: Arc<dyn Embedder>,
+}
 ```
 
+---
+
+#### 패러다임 2 — Active Guideline Routing (Dynamic Prompt Builder)
+
+**개념**: 단일 거대 `Design.md` 시스템 프롬프트 대신, 의도에 맞는 1~3개의 가이드라인 카드만 동적으로 주입한다.
+
+##### 핵심 Rust 구조체
+
+```rust
+// src-tauri/src/harness/guidelines.rs
+
+/// 개별 가이드라인 카드 (Markdown 파일 or SurrealDB 레코드)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GuidelineCard {
+    pub id: String,
+    pub title: String,
+    /// 마크다운 본문 (LLM 시스템 프롬프트에 삽입될 내용)
+    pub content: String,
+    /// 용도 태그 (의미 검색 및 필터용)
+    pub tags: Vec<GuidelineTag>,
+    /// 임베딩 벡터 (SurrealDB에 저장)
+    pub embedding: Option<Vec<f32>>,
+    /// 이 카드가 적용되는 프로젝트 (None = 전역)
+    pub project_scope: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum GuidelineTag {
+    Academic,
+    SafeCoding,
+    RustStyle,
+    Finance,
+    FactChecking,
+    Conciseness,
+    Custom(String),
+}
+
+/// 가이드라인 라우터 trait
+pub trait GuidelineRouter: Send + Sync {
+    /// 사용자 메시지를 분석하여 관련 가이드라인 카드 1~3개를 반환
+    async fn route(
+        &self,
+        user_message: &str,
+        project: &Project,
+        top_k: usize,
+    ) -> Result<Vec<GuidelineCard>, HarnessError>;
+}
+
+/// 경량 의미 검색 기반 라우터 (nomic-embed-text 임베딩 재활용)
+pub struct SemanticGuidelineRouter {
+    pub db: Arc<SurrealDbClient>,
+    pub embedder: Arc<dyn Embedder>,
+}
+
+/// 키워드 분류 기반 라우터 (임베딩 비용 0, 빠른 응답)
+pub struct KeywordGuidelineRouter {
+    /// 키워드 → 가이드라인 ID 매핑 테이블
+    pub rules: Vec<(Vec<String>, String)>,
+}
+```
+
+##### SurrealDB 스키마 (가이드라인)
+
+```sql
+DEFINE TABLE guideline SCHEMAFULL;
+DEFINE FIELD id          ON guideline TYPE string;
+DEFINE FIELD title       ON guideline TYPE string;
+DEFINE FIELD content     ON guideline TYPE string;
+DEFINE FIELD tags        ON guideline TYPE array;
+DEFINE FIELD embedding   ON guideline TYPE array;
+DEFINE FIELD project_id  ON guideline TYPE option<string>;
+DEFINE FIELD created_at  ON guideline TYPE datetime;
+```
+
+---
+
+#### 패러다임 3 — Project Workspace Isolation (Context Boundaries)
+
+**개념**: RAG 데이터와 시스템 룰을 "프로젝트" 단위로 격리하여 토큰 낭비와 정보 오염을 방지한다.
+
+##### 핵심 Rust 구조체
+
+```rust
+// src-tauri/src/harness/project.rs
+
+/// 프로젝트 엔티티 — 격리된 작업 공간
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Project {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub icon: String,              // 이모지 or URL
+    /// 이 프로젝트에 기본 적용되는 가이드라인 ID 목록
+    pub default_guideline_ids: Vec<String>,
+    /// 이 프로젝트 소속 노트북 (RAG 소스) ID 목록
+    pub notebook_ids: Vec<String>,
+    /// 프롬프트 라이브러리 (프로젝트 전용 저장 프롬프트)
+    pub prompt_library: Vec<SavedPrompt>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// 프로젝트 내 노트북 (격리된 RAG 소스 컨테이너)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Notebook {
+    pub id: String,
+    pub project_id: String,        // 반드시 부모 프로젝트에 귀속
+    pub name: String,
+    pub sources: Vec<NotebookSource>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NotebookSource {
+    Pdf   { path: String, title: String },
+    Url   { url: String, title: String },
+    ArXiv { arxiv_id: String, title: String },
+    Code  { path: String, language: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SavedPrompt {
+    pub id: String,
+    pub title: String,
+    pub content: String,
+    pub tags: Vec<String>,
+}
+
+/// 프로젝트 매니저 — CRUD + 컨텍스트 격리 보장
+pub struct ProjectManager {
+    pub db: Arc<SurrealDbClient>,
+}
+
+impl ProjectManager {
+    /// 프로젝트 전용 RAG 검색 (타 프로젝트 데이터 완전 차단)
+    pub async fn search_chunks_isolated(
+        &self,
+        query_embedding: Vec<f32>,
+        project_id: &str,
+        top_k: usize,
+    ) -> Result<Vec<RagChunk>, HarnessError> {
+        // SurrealDB 쿼리에 `WHERE project_id = $project_id` 조건 필수
+        todo!()
+    }
+}
+```
+
+##### SurrealDB 스키마 (프로젝트 격리)
+
+```sql
+DEFINE TABLE project SCHEMAFULL;
+DEFINE FIELD id           ON project TYPE string;
+DEFINE FIELD name         ON project TYPE string;
+DEFINE FIELD description  ON project TYPE option<string>;
+
+DEFINE TABLE notebook SCHEMAFULL;
+DEFINE FIELD id           ON notebook TYPE string;
+DEFINE FIELD project_id   ON notebook TYPE string;  -- 격리 키
+
+-- chunk 테이블에 project_id 추가 (기존 Phase 2 스키마 확장)
+DEFINE FIELD project_id ON chunk TYPE string;
+DEFINE INDEX chunk_project_idx ON chunk FIELDS project_id;
+```
+
+---
+
+#### 패러다임 4 — Generator-Evaluator Loop (Multi-Agent Validation)
+
+**개념**: SLM 오류를 숨겨진 백그라운드 이터레이션으로 완화. 같은 4B 모델로 초안 생성 → 자기비평 → 수정을 최대 3회 반복한다.
+
+##### 핵심 Rust 구조체
+
+```rust
+// src-tauri/src/harness/eval_loop.rs
+
+/// 평가-루프의 한 이터레이션 결과
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvalIteration {
+    pub iteration: u8,
+    pub draft: String,
+    pub critique: Option<String>,
+    pub errors_found: bool,
+    pub revision_needed: bool,
+}
+
+/// 평가 루프 최종 결과
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvalLoopResult {
+    pub final_output: String,
+    pub iterations: Vec<EvalIteration>,
+    pub total_iterations: u8,
+    pub converged: bool,
+}
+
+/// 평가 루프를 실행하는 harness
+pub struct GeneratorEvaluatorLoop {
+    pub ollama: Arc<OllamaClient>,
+    pub max_retries: u8,             // 기본값: 3
+}
+
+impl GeneratorEvaluatorLoop {
+    pub async fn run(
+        &self,
+        context: &WorkingContext,
+        evaluator_system_prompt: &str,
+        emit_progress: impl Fn(EvalLoopProgress),
+    ) -> Result<EvalLoopResult, HarnessError> {
+        let mut iterations = Vec::new();
+
+        for i in 0..self.max_retries {
+            // 1. Generator: 초안 생성
+            let draft = self.generate(&context).await?;
+
+            // 2. Evaluator: 비평 (시스템 프롬프트 교체)
+            let critique = self.evaluate(&draft, evaluator_system_prompt).await?;
+            let errors_found = self.parse_errors(&critique);
+
+            iterations.push(EvalIteration {
+                iteration: i + 1,
+                draft: draft.clone(),
+                critique: Some(critique),
+                errors_found,
+                revision_needed: errors_found,
+            });
+
+            // UI에 진행 상황 스트리밍 (Svelte가 단계별 표시 가능)
+            emit_progress(EvalLoopProgress { iteration: i + 1, errors_found });
+
+            if !errors_found { 
+                return Ok(EvalLoopResult { 
+                    final_output: draft, 
+                    iterations, 
+                    total_iterations: i + 1,
+                    converged: true,
+                });
+            }
+            // context에 비평 내용 추가하여 다음 이터레이션에 활용
+        }
+
+        // 최대 재시도 후 마지막 초안 반환
+        Ok(EvalLoopResult {
+            final_output: iterations.last().unwrap().draft.clone(),
+            iterations,
+            total_iterations: self.max_retries,
+            converged: false,
+        })
+    }
+}
+
+/// Svelte UI에 평가 루프 진행 상황을 스트리밍하는 이벤트 payload
+#[derive(Debug, Clone, Serialize)]
+pub struct EvalLoopProgress {
+    pub iteration: u8,
+    pub errors_found: bool,
+}
+```
+
+---
+
+#### 통합 Harness 에러 타입
+
+```rust
+// src-tauri/src/harness/error.rs
+
+#[derive(Debug, thiserror::Error)]
+pub enum HarnessError {
+    #[error("SurrealDB 오류: {0}")]
+    Database(#[from] surrealdb::Error),
+    #[error("Ollama 연결 오류: {0}")]
+    Ollama(String),
+    #[error("임베딩 오류: {0}")]
+    Embedding(String),
+    #[error("컨텍스트 토큰 예산 초과: {used} > {budget}")]
+    TokenBudgetExceeded { used: u32, budget: u32 },
+    #[error("가이드라인 없음: project_id={0}")]
+    NoGuidelinesFound(String),
+    #[error("프로젝트 격리 위반: chunk project={chunk_pid} != active project={active_pid}")]
+    IsolationViolation { chunk_pid: String, active_pid: String },
+    #[error("평가 루프 수렴 실패: {max_retries}회 초과")]
+    EvalLoopNotConverged { max_retries: u8 },
+}
+```
+
+---
+
+#### 디렉토리 구조 (harness 모듈)
+
+```
+src-tauri/src/
+├── harness/
+│   ├── mod.rs           # pub use 재수출
+│   ├── context.rs       # WorkingContext, ContextBuilder trait
+│   ├── guidelines.rs    # GuidelineCard, GuidelineRouter trait
+│   ├── project.rs       # Project, Notebook, ProjectManager
+│   ├── eval_loop.rs     # GeneratorEvaluatorLoop
+│   └── error.rs         # HarnessError
+├── commands/
+│   ├── chat.rs          # harness를 호출하는 Tauri command
+│   ├── project.rs       # 프로젝트 CRUD Tauri commands
+│   └── guidelines.rs    # 가이드라인 CRUD Tauri commands
+└── ...
+```
+
+---
+
+#### Svelte 5 (프론트엔드) 통합 전략
+
+| 패러다임 | Svelte 컴포넌트 / 스토어 | 비고 |
+|---|---|---|
+| **Working Context** | `contextStore.ts` — 서버에서 `ContextMeta` 수신 후 토큰 사용량 표시 | 기존 토큰 카운터 고도화 |
+| **Active Guideline Routing** | `GuidelinePills.svelte` — 현재 턴에 주입된 가이드라인 태그를 입력창 위에 뱃지로 표시 | 투명성/신뢰도 ↑ |
+| **Project Isolation** | `ProjectSwitcher.svelte` — Sidebar 상단에서 프로젝트 전환, 활성 프로젝트 컨텍스트 전역 store | `projectStore.ts` |
+| **Eval Loop** | `EvalLoopIndicator.svelte` — "검증 중 (2/3)..." 인디케이터 스트리밍 표시 | `eval_loop_progress` Tauri event |
+
+```typescript
+// stores/project.ts (Svelte 5 Runes)
+interface ProjectState {
+  activeProject: Project | null;
+  projects: Project[];
+}
+
+let _state = $state<ProjectState>({ activeProject: null, projects: [] });
+
+export const projectStore = {
+  get active() { return _state.activeProject; },
+  get all() { return _state.projects; },
+  setActive(p: Project) { _state.activeProject = p; },
+};
+```
+
+---
+
+#### ⚠️ 아키텍처 비평 — 잠재적 병목 & 완화 전략
+
+| # | 병목 지점 | 위험도 | 완화 전략 |
+|---|---|---|---|
+| **1** | **평가 루프 지연**: 3회 반복 = 실제 응답 시간 3배. 4B 모델의 ctx 전환 오버헤드까지 더해지면 UX 저하 심각 | 🔴 High | ① 기본은 루프 OFF, 사용자가 "검증 모드" 명시적 활성화. ② Generator 스트리밍을 즉시 UI에 노출하고 평가는 백그라운드에서 수행 (낙관적 UX). ③ "오류 없음" 확률 높은 단순 쿼리는 루프 bypass |
+| **2** | **가이드라인 임베딩 레이턴시**: 매 턴마다 `nomic-embed-text` 호출 → RAG + 가이드라인 이중 임베딩 부하 | 🟡 Medium | `KeywordGuidelineRouter`를 1차 fast-path로 사용. 키워드 미매칭 시에만 의미 검색 fallback. 가이드라인 임베딩은 삽입 시 1회만 계산, SurrealDB 캐시 |
+| **3** | **SurrealDB Embedded vs. 동시 쓰기**: `kv-rocksdb`는 멀티스레드 쓰기 시 락 경합 가능 | 🟡 Medium | Tauri의 `Mutex<SurrealDb>` state를 `Arc<Mutex>` 로 유지. 읽기 중심 설계(쓰기는 하니스 완료 후 비동기 저장). 고부하 시 SurrealDB 외부 프로세스 모드 전환 고려 |
+| **4** | **컨텍스트 트런케이션 정확도**: 오래된 메시지 삭제 시 다단계 추론에 필요한 중간 결과가 사라질 위험 | 🟡 Medium | 단순 FIFO 삭제 대신 "중요도 점수" 기반 트런케이션 구현. `AssistantMessage`에 `importance: f32` 필드를 두고 코드 스니펫·수치 결과·의사결정 포함 메시지에 높은 점수 부여 |
+| **5** | **Evaluator 프롬프트 오염**: 4B 모델이 Critic 페르소나와 Generator 페르소나를 섞어서 자기 작업을 옹호하는 현상 | 🟠 Medium-High | Evaluator 호출 시 system 프롬프트를 완전히 교체 + 대화 히스토리 없이 초안+비평 지침만 전달. 필요 시 "당신은 저자가 아닙니다. 외부 리뷰어입니다" 명시 |
+| **6** | **프로젝트 격리 실수**: 쿼리에 `project_id` 필터 누락 시 데이터 오염 | 🔴 High | `ProjectManager::search_chunks_isolated`를 단일 진입점으로 강제. 직접 SurrealDB 쿼리 금지. `IsolationViolation` 에러로 컴파일 수준이 아닌 런타임 조기 panic |
+
+---
+
+#### 구현 태스크 (Phase 2.5)
+
+- [ ] `src-tauri/src/harness/` 모듈 생성 (mod.rs, context.rs, guidelines.rs, project.rs, eval_loop.rs, error.rs)
+- [ ] `AdaptiveContextBuilder` 구현 (토큰 예산 기반 트런케이션)
+- [ ] `KeywordGuidelineRouter` 구현 (fast-path)
+- [ ] `SemanticGuidelineRouter` 구현 (fallback, nomic-embed-text 재활용)
+- [ ] SurrealDB `guideline` 테이블 정의 + 기본 가이드라인 카드 시딩
+- [ ] SurrealDB `project`, `notebook` 테이블 정의
+- [ ] `chunk` 테이블에 `project_id` 필드 추가 (마이그레이션)
+- [ ] `ProjectManager` CRUD + `search_chunks_isolated` 구현
+- [ ] `GeneratorEvaluatorLoop` 구현 + Tauri event 스트리밍
+- [ ] Tauri commands: `create_project`, `list_projects`, `switch_project`
+- [ ] Tauri commands: `list_guidelines`, `create_guideline`, `route_guidelines`
+- [ ] `projectStore.ts` + `ProjectSwitcher.svelte` (Sidebar 통합)
+- [ ] `GuidelinePills.svelte` (활성 가이드라인 뱃지 표시)
+- [ ] `EvalLoopIndicator.svelte` (검증 진행 인디케이터)
+- [ ] 설정 패널에 "검증 모드 ON/OFF" 토글 추가
+
 #### 추가할 의존성
+
 ```toml
-surrealdb = { version = "2", features = ["kv-rocksdb"] }
+# Cargo.toml
+thiserror = "1.0"           # HarnessError 구현
+tiktoken-rs = "0.5"         # 토큰 카운팅 (트런케이션 로직)
 ```
 
 ---
@@ -597,6 +1026,13 @@ Q-Agent/
 
 ## 📋 전체 체크리스트
 
+### 🔴 Phase 0 — Core Stabilization
+- [ ] Project Persistence (localStorage)
+- [ ] DB Schema Alignment (Project created_at)
+- [ ] Chat-Project Scoping (Project-based conversation filtering)
+- [ ] Robust Model Pulling (Stream parsing fix)
+- [ ] Knowledge Panel UI Polish
+
 ### Phase 1 — Base UI ✅ 완료
 - [x] Perplexity 스타일 GUI
 - [x] CSS 토큰 시스템 (Dark/Light/OLED)
@@ -621,7 +1057,24 @@ Q-Agent/
 - [x] 임베딩 파이프라인 (nomic-embed-text)
 - [x] 웹 검색 및 쿼리 라우팅 (DuckDuckGo Search)
 - [x] 벡터 검색 + RAG 주입 (Hybrid)
-- [ ] Knowledge Base UI 고도화
+- [x] Knowledge Base UI 고도화
+
+### Phase 2.5 — SLM Intelligent Harness
+- [ ] `src-tauri/src/harness/` 모듈 생성
+- [ ] `AdaptiveContextBuilder` (토큰 예산 기반 트런케이션)
+- [ ] `KeywordGuidelineRouter` (fast-path)
+- [ ] `SemanticGuidelineRouter` (semantic fallback)
+- [ ] SurrealDB `guideline` 테이블 + 기본 카드 시딩
+- [ ] SurrealDB `project`, `notebook` 테이블 정의
+- [ ] `chunk` 테이블 `project_id` 필드 마이그레이션
+- [ ] `ProjectManager` CRUD + `search_chunks_isolated`
+- [ ] `GeneratorEvaluatorLoop` + Tauri event 스트리밍
+- [ ] Tauri commands: `create_project`, `list_projects`, `switch_project`
+- [ ] Tauri commands: `list_guidelines`, `create_guideline`, `route_guidelines`
+- [ ] `projectStore.ts` + `ProjectSwitcher.svelte`
+- [ ] `GuidelinePills.svelte` (활성 가이드라인 뱃지)
+- [ ] `EvalLoopIndicator.svelte` (검증 진행 인디케이터)
+- [ ] 설정 패널 "검증 모드 ON/OFF" 토글
 
 ### Phase 3 — SSH GPU 모니터링
 - [ ] 서버 프로파일 UI
@@ -683,4 +1136,4 @@ Q-Agent/
 
 ---
 
-*마지막 업데이트: 2026-04-13 · 모드 시스템 / 인라인 모델 선택기 / NotebookLM 에이전트 기능 기획 추가*
+*마지막 업데이트: 2026-04-15 · SLM Intelligent Harness 패러다임 4종 추가 (Context Separation / Active Guideline Routing / Project Isolation / Generator-Evaluator Loop) + Rust 구조체 설계 + 아키텍처 비평*

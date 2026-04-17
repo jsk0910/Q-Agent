@@ -1,16 +1,40 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import { activeCitation } from '$lib/stores/ui';
+  import { projectStore } from '$lib/stores/projectStore';
 
   let { open = false, standalone = false, onclose } = $props();
 
   let sources = $state<any[]>([]);
   let uploadText = $state("");
   let isUploading = $state(false);
+  let listContainer = $state<HTMLDivElement>();
+
+  // React to activeCitation changes to scroll and highlight
+  $effect(() => {
+    if ($activeCitation && sources.length > 0 && listContainer && (open || standalone)) {
+      const match = $activeCitation.match(/(\d+)/);
+      if (match) {
+        const idx = parseInt(match[1]) - 1;
+        if (idx >= 0 && idx < sources.length) {
+          tick().then(() => {
+            const card = listContainer?.querySelector(`[data-index="${idx}"]`);
+            if (card) {
+              card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              card.classList.add('highlight-pulse');
+              setTimeout(() => card.classList.remove('highlight-pulse'), 2000);
+            }
+          });
+        }
+      }
+      activeCitation.set(null); // Reset after handling
+    }
+  });
 
   async function fetchSources() {
     try {
-      sources = await invoke('get_sources');
+      sources = await invoke('get_sources', { projectId: $projectStore.activeProjectId || null });
     } catch (e) {
       console.error(e);
     }
@@ -20,7 +44,11 @@
     if (!uploadText.trim()) return;
     isUploading = true;
     try {
-      await invoke('add_source', { text: uploadText, format: 'txt' });
+      await invoke('add_source', { 
+        text: uploadText, 
+        format: 'txt', 
+        projectId: $projectStore.activeProjectId || null 
+      });
       uploadText = "";
       await fetchSources();
     } catch (e) {
@@ -32,6 +60,8 @@
   }
 
   $effect(() => {
+    // Re-fetch when project changes or when opened
+    let currentProj = $projectStore.activeProjectId;
     if (open || standalone) {
       fetchSources();
     }
@@ -70,9 +100,9 @@
         </svg>
         Your Sources ({sources.length})
       </h3>
-      <div class="sources-list">
-        {#each sources as src}
-          <div class="source-card">
+      <div class="sources-list" bind:this={listContainer}>
+        {#each sources as src, i}
+          <div class="source-card" data-index={i}>
             <div class="src-title">{src.title}</div>
             <div class="src-summary">{src.summary}</div>
           </div>
@@ -126,9 +156,9 @@
           </svg>
           Your Sources ({sources.length})
         </h3>
-        <div class="sources-list">
-          {#each sources as src}
-            <div class="source-card">
+        <div class="sources-list" bind:this={listContainer}>
+          {#each sources as src, i}
+            <div class="source-card" data-index={i}>
               <div class="src-title">{src.title}</div>
               <div class="src-summary">{src.summary}</div>
             </div>
@@ -261,6 +291,13 @@
     padding: 12px;
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-subtle);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+  }
+
+  :global(.source-card.highlight-pulse) {
+    border-color: var(--accent-primary);
+    background-color: rgba(32, 217, 210, 0.1);
+    box-shadow: 0 0 15px rgba(32, 217, 210, 0.4);
   }
 
   .src-title {

@@ -30,7 +30,19 @@ pub async fn init_db(app_handle: &tauri::AppHandle) -> Result<Surreal<Db>, Strin
         DEFINE FIELD source_id ON chunk TYPE record<source>;
         DEFINE FIELD content ON chunk TYPE string;
         DEFINE FIELD embedding ON chunk TYPE array<float>;
+        DEFINE FIELD project_id ON chunk TYPE option<string>;
         
+        DEFINE TABLE project SCHEMAFULL;
+        DEFINE FIELD name ON project TYPE string;
+        DEFINE FIELD description ON project TYPE string;
+        DEFINE FIELD created_at ON project TYPE datetime DEFAULT time::now();
+
+        DEFINE TABLE guideline SCHEMAFULL;
+        DEFINE FIELD project_id ON guideline TYPE option<string>;
+        DEFINE FIELD keywords ON guideline TYPE array<string>;
+        DEFINE FIELD content ON guideline TYPE string;
+        DEFINE FIELD created_at ON guideline TYPE datetime DEFAULT time::now();
+
         DEFINE INDEX chunk_embedding_idx ON chunk FIELDS embedding HNSW DIMENSION 768 DIST COSINE;
     ";
     

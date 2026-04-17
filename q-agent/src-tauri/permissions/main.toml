@@ -6,7 +6,16 @@ description = "Allows calling custom backend commands"
 allow = [
   "chat_with_ollama",
   "list_models",
+  "evaluate_response",
   "add_source",
   "get_sources",
-  "intercept_and_route"
+  "intercept_and_route",
+  "save_profile",
+  "load_profiles",
+  "pull_model",
+  "create_project",
+  "list_projects",
+  "add_guideline",
+  "get_guidelines",
+  "seed_default_guidelines"
 ]

@@ -5,8 +5,9 @@
   import { profileStore } from '$lib/stores/profile';
   import { effectiveSettings } from '$lib/stores/ui';
 
-  let { onrequestInstall } = $props<{
+  let { onrequestInstall, onopenExplorer } = $props<{
     onrequestInstall: (model: string) => void;
+    onopenExplorer: () => void;
   }>();
 
   let installedModels = $state<string[]>([]);
@@ -14,7 +15,7 @@
   let isLoading = $state(true);
 
   let activeModeInfo = $derived(modeStore.getModeInfo($modeStore));
-  let currentModel = $derived($effectiveSettings.modelName);
+  let currentModel = $derived($effectiveSettings.modelName || 'qwen3.5:4b');
 
   async function refreshModels() {
     isLoading = true;
@@ -123,6 +124,15 @@
             </button>
           {/each}
         </div>
+
+        <div class="dropdown-footer">
+          <button class="more-btn" onclick={() => { isOpen = false; onopenExplorer(); }}>
+            <span>Explore All Models</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   {/if}
@@ -184,7 +194,7 @@
 
   .model-dropdown {
     position: absolute;
-    top: calc(100% + 8px);
+    bottom: calc(100% + 8px);
     left: 0;
     width: 260px;
     background: var(--bg-app);
@@ -197,7 +207,7 @@
   }
 
   @keyframes dropdownFadeIn {
-    from { opacity: 0; transform: translateY(-8px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
@@ -289,6 +299,35 @@
   .status {
     font-size: 0.75rem;
     opacity: 0.8;
+  }
+
+  .dropdown-footer {
+    padding: 8px;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+  }
+
+  .more-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    color: var(--accent-primary);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .more-btn:hover {
+    background: var(--bg-overlay);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 10px var(--accent-glow);
   }
 
   .spin {

@@ -10,10 +10,13 @@
   import type { Message } from '$lib/stores/ui';
   import { modeStore } from '$lib/stores/mode';
   import { profileStore } from '$lib/stores/profile';
+  import { projectStore } from '$lib/stores/projectStore';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import WidgetPanel from '$lib/components/WidgetPanel.svelte';
   import ModelPicker from '$lib/components/ModelPicker.svelte';
   import ModelInstallModal from '$lib/components/ModelInstallModal.svelte';
+  import ModelExplorerModal from '$lib/components/ModelExplorerModal.svelte';
+  import ChatBubble from '$lib/components/ChatBubble.svelte';
 
   // ─── Marked setup ────────────────────────────────────────────────────────
   const renderer = new marked.Renderer();
@@ -48,6 +51,11 @@
   let chatEndEl = $state<HTMLDivElement>();
   let textareaEl = $state<HTMLTextAreaElement>();
   let installModel = $state<string | null>(null);
+  let exploreModalOpen = $state(false);
+  let evalStatus = $state('');
+  let currentSummary = $state<string | null>(null);
+
+  let installedModels = $state<string[]>([]);
 
   let currentConv = $derived($activeConversation);
   let messages = $derived(currentConv?.messages ?? []);
@@ -162,23 +170,44 @@
     await tick();
 
     // -- Agent Routing Step -- 
-    chatStore.updateMessage(convId, asstId, { content: "<span class='gathering-sources'>Agent is gathering sources...</span>\n" });
+    chatStore.updateMessage(convId, asstId, { harnessStatus: "Agent is gathering sources..." });
     
     let contextStr = "";
     try {
-      contextStr = await invoke('intercept_and_route', { prompt: text });
+      contextStr = await invoke('intercept_and_route', { 
+        window,
+        prompt: text, 
+        projectId: $projectStore.activeProjectId || null 
+      });
     } catch(e) {
       console.error("Routing error:", e);
     }
     
-    chatStore.updateMessage(convId, asstId, { content: "" });
+    chatStore.updateMessage(convId, asstId, { harnessStatus: "" });
     const finalSystemPrompt = $effectiveSettings.systemPrompt + (contextStr ? "\n\n" + contextStr : "");
 
     let unlistenToken: UnlistenFn | undefined;
-    let unlistenFinished: UnlistenFn | undefined;
+    let unlistenHarnessStatus: UnlistenFn | undefined;
+    let unlistenHarnessPlan: UnlistenFn | undefined;
+    let unlistenHarnessResults: UnlistenFn | undefined;
+    let unlistenHarnessSummary: UnlistenFn | undefined;
+
     let streamRaw = "";
 
     try {
+      unlistenHarnessStatus = await listen<string>('harness_status', (event) => {
+        chatStore.updateMessage(convId, asstId, { harnessStatus: event.payload });
+      });
+      unlistenHarnessPlan = await listen<any>('harness_plan_created', (event) => {
+        chatStore.updateMessage(convId, asstId, { harnessPlan: event.payload });
+      });
+      unlistenHarnessResults = await listen<string[]>('harness_results_updated', (event) => {
+        chatStore.updateMessage(convId, asstId, { harnessResults: event.payload });
+      });
+      unlistenHarnessSummary = await listen<string | null>('harness_summary_updated', (event) => {
+        currentSummary = event.payload;
+      });
+
       if ($settings.streamTokens) {
         unlistenToken = await listen<string>('chat_token', (event) => {
           streamRaw += event.payload;
@@ -201,12 +230,18 @@
         model: $effectiveSettings.modelName,
         temperature: $settings.temperature,
         systemPrompt: finalSystemPrompt,
-        stream: $settings.streamTokens
+        stream: $settings.streamTokens,
+        auto_plan: $settings.autoPlanning,
+        summarize_threshold: $settings.summarizationThreshold,
+        summary: currentSummary
       });
 
       // Cleanup listeners
       if (unlistenToken) unlistenToken();
-      if (unlistenFinished) unlistenFinished();
+      if (unlistenHarnessStatus) unlistenHarnessStatus();
+      if (unlistenHarnessPlan) unlistenHarnessPlan();
+      if (unlistenHarnessResults) unlistenHarnessResults();
+      if (unlistenHarnessSummary) unlistenHarnessSummary();
 
       // Final reconciliation
       const finalRaw = $settings.streamTokens ? streamRaw : raw;
@@ -215,6 +250,36 @@
         content: answer,
         thinking: thinking ?? undefined,
       });
+
+      // ── Eval Loop (Critic Pass) ──────────────────────────────────────
+      if ($settings.enableEvalLoop && answer.trim().length > 0) {
+        evalStatus = 'Initializing verification...';
+        chatStore.updateMessage(convId, asstId, {
+          content: answer + `\n\n*🧪 Initializing verification...*`,
+        });
+
+        const unlistenEval = await listen<{iteration: number, max_iterations: number, status: string}>('eval_progress', (event) => {
+          evalStatus = event.payload.status;
+          chatStore.updateMessage(convId, asstId, {
+            content: answer + `\n\n*🧪 ${evalStatus}*`,
+          });
+        });
+
+        try {
+          const verified: string = await invoke('evaluate_response', {
+            draft: answer,
+            prompt: text,
+            model: $effectiveSettings.modelName,
+          });
+          chatStore.updateMessage(convId, asstId, { content: verified });
+        } catch (evalErr) {
+          console.warn('Eval loop failed, keeping original answer:', evalErr);
+          chatStore.updateMessage(convId, asstId, { content: answer });
+        } finally {
+          unlistenEval();
+          evalStatus = '';
+        }
+      }
       
     } catch (err) {
       if (unlistenToken) unlistenToken();
@@ -227,24 +292,54 @@
     }
   }
 
+  async function stopAction() {
+    try {
+      await invoke('stop_generation');
+      isLoading = false;
+    } catch (e) {
+      console.error('Stop failed:', e);
+    }
+  }
+
   // ─── Export Chat ────────────────────────────────────────────────────────
-  function exportChat() {
+  async function exportChat(format: 'md' | 'html' = 'md') {
     if (!currentConv) return;
     
-    let md = `# ${currentConv.title}\n\n`;
-    currentConv.messages.forEach((m: Message) => {
-      md += `### ${m.role === 'user' ? 'User' : 'Assistant'}\n`;
-      if (m.thinking && $settings.showThinking) {
-        md += `<details><summary>Thinking process</summary>\n\n${m.thinking}\n</details>\n\n`;
-      }
-      md += `${m.content}\n\n---\n\n`;
-    });
+    let content = '';
+    let mime = '';
+    let ext = '';
 
-    const blob = new Blob([md], { type: 'text/markdown' });
+    if (format === 'md') {
+      content = `# ${currentConv.title}\n\n`;
+      currentConv.messages.forEach((m: Message) => {
+        content += `### ${m.role === 'user' ? 'User' : 'Assistant'}\n`;
+        if (m.thinking && $settings.showThinking) {
+          content += `<details><summary>Thinking process</summary>\n\n${m.thinking}\n</details>\n\n`;
+        }
+        content += `${m.content}\n\n---\n\n`;
+      });
+      mime = 'text/markdown';
+      ext = 'md';
+    } else {
+      let htmlBody = `<h1>${currentConv.title}</h1>`;
+      for (const m of currentConv.messages) {
+        htmlBody += `<h3>${m.role === 'user' ? 'User' : 'Assistant'}</h3>`;
+        if (m.thinking && $settings.showThinking) {
+          htmlBody += `<details><summary>Thinking process</summary><pre style="white-space:pre-wrap;background:#f4f4f4;padding:1em;border-radius:4px;">${m.thinking}</pre></details>`;
+        }
+        const renderedObj = await marked.parse(m.content);
+        htmlBody += `<div>${renderedObj}</div><hr/>`;
+      }
+      content = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${currentConv.title}</title><style>body{font-family:sans-serif;max-width:800px;margin:2em auto;line-height:1.6;color:#333;padding:0 20px;} h1{border-bottom:1px solid #ccc;padding-bottom:10px;} hr{border:0;border-top:1px solid #eee;margin:2em 0;}</style></head><body>${htmlBody}</body></html>`;
+      mime = 'text/html';
+      ext = 'html';
+    }
+
+    const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${currentConv.title.replace(/[^a-zA-Z0-9\s]/g, '_').trim()}.md`;
+    a.download = `${currentConv.title.replace(/[^a-zA-Z0-9\s]/g, '_').trim()}.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -260,6 +355,11 @@
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && isLoading) {
+      e.preventDefault();
+      stopAction();
+      return;
+    }
     if (e.ctrlKey || e.metaKey) {
       if (e.key === 'n') {
         e.preventDefault();
@@ -285,7 +385,16 @@
   onMount(() => {
     // Start with a fresh conversation
     if (!$chatStore.activeId) chatStore.newConversation();
+    refreshInstalledModels();
   });
+
+  async function refreshInstalledModels() {
+    try {
+      installedModels = await invoke<string[]>('list_models');
+    } catch (e) {
+      console.error('Failed to list models', e);
+    }
+  }
 
   // Thinking toggle per message
   let expandedThinking = $state(new Set<string>());
@@ -313,7 +422,6 @@
     <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-left">
-        <ModelPicker onrequestInstall={m => installModel = m} />
         {#if messages.length > 0}
           <span class="token-chip" title="Estimated Tokens">
             {totalTokens} tokens
@@ -339,14 +447,28 @@
         <button
           class="topbar-icon-btn"
           id="topbar-export-btn"
-          title="Export Conversation"
-          onclick={exportChat}
+          title="Export Conversation (MD)"
+          onclick={() => exportChat('md')}
           disabled={!currentConv || messages.length === 0}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+        <button
+          class="topbar-icon-btn"
+          title="Export Conversation (HTML)"
+          onclick={() => exportChat('html')}
+          disabled={!currentConv || messages.length === 0}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
           </svg>
         </button>
         <button
@@ -402,92 +524,27 @@
           </div>
         </div>
       {:else}
-        <div class="messages-list" oncite-click={() => openWidgets('sources')}>
+        <div class="messages-list" oncite-click={(e) => {
+          // Store the citation ID for highlighting
+          const citationId = e.detail;
+          widgetActiveTab = 'sources';
+          widgetPanelOpen = true;
+          // Trigger a custom store or event to scroll and highlight (we'll implement this store next)
+          import('$lib/stores/ui').then(({ activeCitation }) => {
+            activeCitation.set(citationId);
+          });
+        }}>
           {#each messages as msg, i (msg.id)}
-            <div class="message-wrap" class:user={msg.role === 'user'} class:asst={msg.role === 'assistant'}>
-
-              {#if msg.role === 'user'}
-                <!-- User bubble -->
-                <div class="user-bubble">
-                  <div class="bubble-content">{msg.content}</div>
-                  <span class="msg-time">{formatTimestamp(msg.timestamp)}</span>
-                </div>
-
-              {:else}
-                <!-- Assistant response -->
-                <div class="asst-block">
-                  <div class="asst-avatar">
-                    <span>⬡</span>
-                  </div>
-                  <div class="asst-body">
-
-                    <!-- Thinking block -->
-                    {#if msg.thinking && $settings.showThinking}
-                      <button
-                        class="thinking-toggle"
-                        onclick={() => toggleThinking(msg.id)}
-                        aria-expanded={expandedThinking.has(msg.id)}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M9 18c-4.51 2-5-2-7-2M22 6c-1 3-2 4-4 5s-3 1-3 3v1"/>
-                          <path d="M2 2l20 20"/>
-                        </svg>
-                        <span>Thinking process</span>
-                        <svg
-                          class="chevron"
-                          class:rotated={expandedThinking.has(msg.id)}
-                          width="12" height="12" viewBox="0 0 24 24"
-                          fill="none" stroke="currentColor" stroke-width="2.5"
-                        >
-                          <path d="M6 9l6 6 6-6"/>
-                        </svg>
-                      </button>
-
-                      {#if expandedThinking.has(msg.id)}
-                        <div class="thinking-content">
-                          <div class="thinking-inner">
-                            {msg.thinking}
-                          </div>
-                        </div>
-                      {/if}
-                    {/if}
-
-                    <!-- Answer content -->
-                    {#if msg.content}
-                      {#await renderMd(msg.content) then html}
-                        <div class="markdown-body">{@html html}</div>
-                      {/await}
-                    {/if}
-
-                    {#if isLoading && i === messages.length - 1 && msg.role === 'assistant'}
-                      <div class="typing-indicator">
-                        <span></span><span></span><span></span>
-                      </div>
-                    {/if}
-
-                    <!-- Footer -->
-                    <div class="asst-footer">
-                      <span class="msg-time">{formatTimestamp(msg.timestamp)}</span>
-                      {#if msg.model}
-                        <span class="model-tag">{msg.model}</span>
-                      {/if}
-                      {#if msg.content}
-                        <button
-                          class="action-btn"
-                          title="Copy response"
-                          onclick={() => navigator.clipboard.writeText(msg.content)}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2"/>
-                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                          </svg>
-                        </button>
-                      {/if}
-                    </div>
-                  </div>
-                </div>
-              {/if}
-            </div>
+            <ChatBubble 
+              {msg}
+              isLast={i === messages.length - 1}
+              {isLoading}
+              showThinking={$settings.showThinking}
+              {expandedThinking}
+              onToggleThinking={toggleThinking}
+              {formatTimestamp}
+              {renderMd}
+            />
           {/each}
           <div bind:this={chatEndEl}></div>
         </div>
@@ -497,6 +554,12 @@
     <!-- Input bar -->
     <div class="input-zone">
       <div class="input-bar" class:focused={false} id="input-bar">
+        <div class="model-picker-wrapper">
+          <ModelPicker 
+            onrequestInstall={m => installModel = m} 
+            onopenExplorer={() => exploreModalOpen = true}
+          />
+        </div>
         <textarea
           id="chat-input"
           bind:this={textareaEl}
@@ -510,25 +573,32 @@
         ></textarea>
         <div class="input-actions">
           <span class="hint-text">
-            {$settings.sendOnEnter ? '↵ Send' : 'Ctrl+↵ Send'}
+            {isLoading ? 'Esc to Stop' : ($settings.sendOnEnter ? '↵ Send' : 'Ctrl+↵ Send')}
           </span>
-          <button
-            class="send-btn"
-            id="send-btn"
-            onclick={send}
-            disabled={isLoading || !prompt.trim()}
-            aria-label="Send message"
-          >
-            {#if isLoading}
-              <svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/>
+          {#if isLoading}
+            <button
+              class="stop-btn"
+              id="stop-btn"
+              onclick={stopAction}
+              aria-label="Stop generation"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
               </svg>
-            {:else}
+            </button>
+          {:else}
+            <button
+              class="send-btn"
+              id="send-btn"
+              onclick={send}
+              disabled={!prompt.trim()}
+              aria-label="Send message"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
               </svg>
-            {/if}
-          </button>
+            </button>
+          {/if}
         </div>
       </div>
       <p class="disclaimer">
@@ -551,6 +621,18 @@
       onsuccess={(m) => {
         profileStore.setModelForMode($modeStore, m);
         installModel = null;
+        refreshInstalledModels();
+      }}
+    />
+  {/if}
+
+  {#if exploreModalOpen}
+    <ModelExplorerModal 
+      {installedModels}
+      onclose={() => exploreModalOpen = false}
+      onrequestInstall={(m) => {
+        exploreModalOpen = false;
+        installModel = m;
       }}
     />
   {/if}
@@ -776,71 +858,6 @@
     padding-right: 24px;
   }
 
-  .message-wrap {
-    display: flex;
-    flex-direction: column;
-    padding: 6px 0;
-  }
-
-  /* User bubble */
-  .user-bubble {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    animation: fadeUp 200ms ease both;
-  }
-
-  .bubble-content {
-    max-width: 75%;
-    padding: 10px 15px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
-    border-radius: var(--border-radius-lg) var(--border-radius-lg) 4px var(--border-radius-lg);
-    color: var(--text-primary);
-    font-size: var(--font-size-base);
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  /* Assistant block (Perplexity style: left-aligned, full width, no bubble) */
-  .asst-block {
-    display: flex;
-    gap: 12px;
-    animation: fadeUp 200ms ease both;
-    padding: 8px 0;
-  }
-
-  .asst-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--accent-dim);
-    border: 1px solid rgba(32, 217, 210, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    flex-shrink: 0;
-    margin-top: 2px;
-    color: var(--accent-primary);
-  }
-
-  .asst-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  /* Typing indicator animation */
-  @keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
-    40% { transform: scale(1); opacity: 1; }
-  }
-
   /* ─── Gathering Sources Pulse ─────────────────────────────────── */
   :global(.gathering-sources) {
     font-style: italic;
@@ -851,119 +868,6 @@
   @keyframes pulseText {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 1; }
-  }
-
-  /* Thinking toggle */
-  .thinking-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 5px 12px;
-    background: var(--thinking-bg);
-    border: 1px solid var(--thinking-border);
-    color: var(--thinking-text);
-    border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: var(--font-sans);
-    transition: background var(--transition-fast);
-    align-self: flex-start;
-  }
-
-  .thinking-toggle:hover {
-    background: rgba(255, 180, 0, 0.10);
-  }
-
-  .chevron {
-    transition: transform var(--transition-base);
-  }
-
-  .chevron.rotated {
-    transform: rotate(180deg);
-  }
-
-  .thinking-content {
-    animation: fadeUp 150ms ease;
-  }
-
-  .thinking-inner {
-    background: var(--thinking-bg);
-    border: 1px solid var(--thinking-border);
-    border-radius: var(--border-radius-md);
-    padding: 12px 14px;
-    font-size: var(--font-size-sm);
-    color: var(--thinking-text);
-    line-height: 1.7;
-    white-space: pre-wrap;
-    font-family: var(--font-mono);
-    border-left: 3px solid var(--thinking-border);
-    max-height: 300px;
-    overflow-y: auto;
-  }
-
-  /* Typing indicator */
-  .typing-indicator {
-    display: flex;
-    gap: 5px;
-    padding: 12px 4px;
-    align-items: center;
-  }
-
-  .typing-indicator span {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent-primary);
-    animation: bounce 1s ease-in-out infinite;
-    opacity: 0.7;
-  }
-
-  .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
-  .typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
-
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); opacity: 0.4; }
-    50%       { transform: translateY(-5px); opacity: 1; }
-  }
-
-  /* Assistant footer */
-  .asst-footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 4px;
-  }
-
-  .msg-time {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-  }
-
-  .model-tag {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    background: var(--bg-elevated);
-    padding: 1px 6px;
-    border-radius: 99px;
-    border: 1px solid var(--border-subtle);
-  }
-
-  .action-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px; height: 24px;
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast);
-  }
-
-  .action-btn:hover {
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
   }
 
   /* ─── Markdown Styles ──────────────────────────────────────────── */
@@ -1155,8 +1059,13 @@
     background: var(--bg-input);
     border: 1.5px solid var(--border-default);
     border-radius: var(--border-radius-xl);
-    padding: 10px 10px 10px 18px;
+    padding: 10px 10px 10px 14px;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .model-picker-wrapper {
+    flex-shrink: 0;
+    margin-bottom: 2px;
   }
 
   .input-bar:focus-within {
@@ -1226,6 +1135,32 @@
 
   .send-btn:active:not(:disabled) {
     transform: scale(0.96);
+  }
+
+  .stop-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #ff4d4d;
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    flex-shrink: 0;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.4);
+  }
+
+  .stop-btn:hover {
+    background: #ff3333;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 77, 77, 0.6);
+  }
+
+  .stop-btn:active {
+    transform: scale(0.9);
   }
 
   .spin {

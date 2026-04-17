@@ -50,6 +50,12 @@
   function toggleStream() {
     settings.update(s => ({ ...s, streamTokens: !s.streamTokens }));
   }
+  function toggleEvalLoop() {
+    settings.update(s => ({ ...s, enableEvalLoop: !s.enableEvalLoop }));
+  }
+  function toggleAutoPlanning() {
+    settings.update(s => ({ ...s, autoPlanning: !s.autoPlanning }));
+  }
 
   onMount(async () => {
     try {
@@ -208,6 +214,52 @@
         >
           <span class="thumb"></span>
         </button>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-label-group">
+          <label class="setting-label">🧪 Eval Loop</label>
+          <span class="setting-hint">Verify answers with a critic pass</span>
+        </div>
+        <button
+          class="toggle-switch"
+          class:on={$settings.enableEvalLoop}
+          onclick={toggleEvalLoop}
+          role="switch"
+          aria-checked={$settings.enableEvalLoop}
+        >
+          <span class="thumb"></span>
+        </button>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-label-group">
+          <label class="setting-label">🧩 Auto Planning</label>
+          <span class="setting-hint">Step-by-step for SLM (≤ 10B)</span>
+        </div>
+        <button
+          class="toggle-switch"
+          class:on={$settings.autoPlanning}
+          onclick={toggleAutoPlanning}
+          role="switch"
+          aria-checked={$settings.autoPlanning}
+        >
+          <span class="thumb"></span>
+        </button>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-label-group">
+          <label class="setting-label">
+            Summarize At <span class="val-badge">{($settings.summarizationThreshold * 100).toFixed(0)}%</span>
+          </label>
+          <span class="setting-hint">Compress history when context is full</span>
+        </div>
+        <input
+          type="range" min="0.1" max="0.9" step="0.05"
+          bind:value={$settings.summarizationThreshold}
+          class="slider mini"
+        />
       </div>
     </section>
 
@@ -391,6 +443,52 @@
             <span class="thumb"></span>
           </button>
         </div>
+
+        <div class="setting-row">
+          <div class="setting-label-group">
+            <label class="setting-label">🧪 Eval Loop</label>
+            <span class="setting-hint">Verify answers with a critic pass</span>
+          </div>
+          <button
+            class="toggle-switch"
+            class:on={$settings.enableEvalLoop}
+            onclick={toggleEvalLoop}
+            role="switch"
+            aria-checked={$settings.enableEvalLoop}
+          >
+            <span class="thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label-group">
+            <label class="setting-label">🧩 Auto Planning</label>
+            <span class="setting-hint">Step-by-step for SLM (≤ 10B)</span>
+          </div>
+          <button
+            class="toggle-switch"
+            class:on={$settings.autoPlanning}
+            onclick={toggleAutoPlanning}
+            role="switch"
+            aria-checked={$settings.autoPlanning}
+          >
+            <span class="thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label-group">
+            <label class="setting-label">
+              Summarize At <span class="val-badge">{($settings.summarizationThreshold * 100).toFixed(0)}%</span>
+            </label>
+            <span class="setting-hint">Compress history when context is full</span>
+          </div>
+          <input
+            type="range" min="0.1" max="0.9" step="0.05"
+            bind:value={$settings.summarizationThreshold}
+            class="slider mini"
+          />
+        </div>
       </section>
 
       <!-- System Prompt -->
@@ -530,6 +628,17 @@
     gap: 6px;
   }
 
+  .setting-label-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .setting-hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+
   .val-badge {
     background: var(--accent-dim);
     color: var(--accent-primary);
@@ -655,6 +764,11 @@
     border-radius: 50%;
     background: var(--accent-primary);
     box-shadow: 0 0 6px var(--accent-glow);
+  }
+
+  .slider.mini {
+    width: 100px;
+    flex: none;
   }
 
   /* Reset */

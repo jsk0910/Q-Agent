@@ -17,6 +17,9 @@ export interface UISettings {
   showThinking: boolean;
   streamTokens: boolean;
   temperature: number;
+  enableEvalLoop: boolean;
+  autoPlanning: boolean;
+  summarizationThreshold: number;
 }
 
 const defaultSettings: UISettings = {
@@ -28,6 +31,9 @@ const defaultSettings: UISettings = {
   showThinking: true,
   streamTokens: true,
   temperature: 0.7,
+  enableEvalLoop: false,
+  autoPlanning: true,
+  summarizationThreshold: 0.7,
 };
 
 // Load from localStorage if available
@@ -94,6 +100,9 @@ export interface Message {
   timestamp: Date;
   model?: string;
   tokens?: number;
+  harnessPlan?: any;
+  harnessResults?: string[];
+  harnessStatus?: string;
 }
 
 export interface Conversation {
@@ -227,3 +236,6 @@ export const chatStore = createChatStore();
 export const activeConversation = derived(chatStore, $s =>
   $s.conversations.find(c => c.id === $s.activeId) ?? null
 );
+
+// Store for RAG citation highlighting
+export const activeCitation = writable<string | null>(null);

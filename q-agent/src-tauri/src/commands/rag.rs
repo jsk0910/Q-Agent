@@ -2,10 +2,15 @@ use serde::{Deserialize, Serialize};
 use surrealdb::engine::local::Db;
 use surrealdb::Surreal;
 use surrealdb_types::{RecordId, SurrealValue};
+use std::sync::atomic::Ordering;
+use crate::CancellationState;
+use tauri::State;
+use futures_util::future::join_all;
 
 #[derive(Serialize, Deserialize, Debug, SurrealValue)]
 pub struct Source {
     pub id: Option<RecordId>,
+    pub project_id: Option<String>,
     pub title: String,
     pub summary: String,
     pub format: String,
@@ -14,6 +19,7 @@ pub struct Source {
 #[derive(Serialize, Deserialize, Debug, SurrealValue)]
 pub struct Chunk {
     pub source_id: RecordId,
+    pub project_id: Option<String>,
     pub content: String,
     pub embedding: Vec<f32>,
 }
@@ -70,11 +76,30 @@ async fn generate_summary(text: &str) -> Result<(String, String), String> {
     }
 
     // Try parsing the json output. In case qwen hallucinates some markdown blocks around JSON.
-    let clean_json = json_res.response.replace("```json", "").replace("```", "").trim().to_string();
-    let parsed: Extracted = serde_json::from_str(&clean_json).unwrap_or_else(|_| Extracted {
-        title: "Untitled Document".into(),
-        summary: "Summary could not be automatically generated.".into(),
-    });
+    let clean_json = json_res.response
+        .trim()
+        .trim_start_matches("```json")
+        .trim_start_matches("```")
+        .trim_end_matches("```")
+        .trim()
+        .to_string();
+
+    let parsed: Extracted = match serde_json::from_str(&clean_json) {
+        Ok(p) => p,
+        Err(_) => {
+            if let (Some(start), Some(end)) = (clean_json.find('{'), clean_json.rfind('}')) {
+                serde_json::from_str(&clean_json[start..=end]).unwrap_or_else(|_| Extracted {
+                    title: "Untitled Document".into(),
+                    summary: "Summary could not be automatically generated.".into(),
+                })
+            } else {
+                Extracted {
+                    title: "Untitled Document".into(),
+                    summary: "Summary could not be automatically generated.".into(),
+                }
+            }
+        }
+    };
 
     Ok((parsed.title, parsed.summary))
 }
@@ -118,19 +143,31 @@ fn simple_chunker(text: &str, chunk_size: usize) -> Vec<String> {
 
 #[tauri::command]
 pub async fn add_source(
-    db: tauri::State<'_, Surreal<Db>>,
+    db: State<'_, Surreal<Db>>,
+    cancel: State<'_, CancellationState>,
     text: String,
     format: String,
+    project_id: Option<String>,
 ) -> Result<Source, String> {
-    
-    // 1. Generate Title and Summary using Qwen
-    let (title, summary) = generate_summary(&text).await?;
+    // Reset cancellation flag
+    cancel.0.store(false, Ordering::SeqCst);
+
+    // 1. Generate Title and Summary using Qwen (with fallback)
+    if cancel.0.load(Ordering::SeqCst) { return Err("Cancelled".into()); }
+    let (title, summary) = match generate_summary(&text).await {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("Summary generation failed: {}. Using fallback.", e);
+            ("Untitled Document".into(), "Summary not available.".into())
+        }
+    };
 
     // 2. Add Source to DB
     let source_record: Option<Source> = db
         .create("source")
         .content(Source {
             id: None,
+            project_id: project_id.clone(),
             title: title.clone(),
             summary: summary.clone(),
             format,
@@ -146,31 +183,67 @@ pub async fn add_source(
 
     // 4. Determine embeddings in batches if necessary, but Ollama supports array.
     // For large documents, we should chunk the array being sent to Ollama.
-    // Simplifying: send chunks 50 at a time
-    for chunk_batch in chunks_texts.chunks(50) {
-        let embeddings = get_embeddings(chunk_batch).await?;
-        
-        for (i, content) in chunk_batch.iter().enumerate() {
-            let chunk_record = Chunk {
-                source_id: source_id.clone(),
-                content: content.clone(),
-                embedding: embeddings[i].clone(),
-            };
-            let _: Option<Chunk> = db
-                .create("chunk")
-                .content(chunk_record)
-                .await
-                .map_err(|e| e.to_string())?;
+    // Simplifying: send chunks batches concurrently
+    let chunk_batches: Vec<_> = chunks_texts.chunks(100).map(|c| c.to_vec()).collect();
+    let mut futures = Vec::new();
+    
+    for batch in chunk_batches {
+        if cancel.0.load(Ordering::SeqCst) {
+            return Err("Cancelled during embedding process".into());
         }
+        futures.push(async move {
+            let embeddings = get_embeddings(&batch).await?;
+            Ok::<_, String>((batch, embeddings))
+        });
+    }
+
+    let results = join_all(futures).await;
+
+    let mut success_count = 0;
+    for res in results {
+        match res {
+            Ok((batch, embeddings)) => {
+                for (i, content) in batch.into_iter().enumerate() {
+                    let chunk_record = Chunk {
+                        source_id: source_id.clone(),
+                        project_id: project_id.clone(),
+                        content,
+                        embedding: embeddings[i].clone(),
+                    };
+                    let save_res: Result<Option<Chunk>, _> = db
+                        .create("chunk")
+                        .content(chunk_record)
+                        .await;
+                    
+                    if save_res.is_ok() {
+                        success_count += 1;
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Batch embedding failed: {}", e);
+                // Continue to next batch instead of failing everything
+            }
+        }
+    }
+
+    if success_count == 0 && !chunks_texts.is_empty() {
+        return Err("Failed to process any document chunks".into());
     }
 
     Ok(source)
 }
 
 #[tauri::command]
-pub async fn get_sources(db: tauri::State<'_, Surreal<Db>>) -> Result<Vec<Source>, String> {
+pub async fn get_sources(db: tauri::State<'_, Surreal<Db>>, project_id: Option<String>) -> Result<Vec<Source>, String> {
+    let query = if let Some(pid) = project_id {
+        format!("SELECT * FROM source WHERE project_id = '{}' ORDER BY created_at DESC", pid)
+    } else {
+        "SELECT * FROM source WHERE project_id = NONE ORDER BY created_at DESC".to_string()
+    };
+
     let mut res = db
-        .query("SELECT * FROM source ORDER BY created_at DESC")
+        .query(&query)
         .await
         .map_err(|e| e.to_string())?;
         
