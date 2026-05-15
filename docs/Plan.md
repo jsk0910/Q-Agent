@@ -1,8 +1,8 @@
-# Q-Agent Master Plan v4.2
+# Q-Agent Master Plan v4.3
 
-> **Version**: 4.2 · **Authored**: 2026-05-13 · **Updated**: 2026-05-15
-> **Status**: Active Blueprint — 생산성/안전성 강화 및 UI/UX 고도화
-> **Replaces**: Plan.md v4.1 (2026-05-13)
+> **Version**: 4.3 · **Authored**: 2026-05-13 · **Updated**: 2026-05-15
+> **Status**: Active Blueprint — 지능형 권한 제어 및 OS-Native 자동화 고도화
+> **Replaces**: Plan.md v4.2 (2026-05-15)
 
 ---
 
@@ -264,16 +264,24 @@ RAGAS 스타일의 평가 프레임워크를 내재화하여 에이전트 성능
 
 ---
 
-## 5. Computer Mode: 자가 치유 코딩 루프
+## 5. Computer Mode: OS-Native 지능형 제어
 
-### 5.1 Self-healing Loop
+### 5.1 Native Context Retrieval (Hybrid Logic)
+
+단순 스크린샷 기반의 Vision 분석을 넘어, OS 고유의 API를 통해 구조적 데이터를 직접 추출.
+- **UI Tree Extraction**: Tauri Native Rust Hooks를 통해 활성 창의 텍스트와 UI 구성 요소(Tree)를 직접 읽어옴.
+    - Windows: UI Automation (UIA)
+    - macOS: Accessibility API (AXUI)
+- **장점**: 시각적 지연 시간(Latency) 제거, 텍스트의 정확한 추출, 백그라운드 탭 데이터 접근 가능.
+
+### 5.2 Self-healing Loop
 
 ```
 코드 생성
   → Ghost Prototyping (WASM 샌드박스)
   → 오류 감지 시: 로그 캡처 → 원인 분석 → 재생성
   → 성공 시: "실제 로컬에 반영할까요?" HITL 승인 요청
-  → 로컬 적용
+  → 로컬 적용 (Live Artifacts와 연동)
 ```
 
 ### 5.2 MCP (Model Context Protocol)
@@ -292,23 +300,28 @@ RAGAS 스타일의 평가 프레임워크를 내재화하여 에이전트 성능
 
 ---
 
-## 6. HITL & 제한적 MCP 보안 레이어
+## 6. 선택형 권한 오케스트레이터 (Permission Orchestrator)
 
-모든 에이전트 작업은 Rust 기반 보안 레이어를 통해 격리 및 통제됨.
+모든 MCP 도구 호출은 Rust 기반의 **Backend Guardrail Interceptor**를 통해 필터링됨. 사용자는 UI 상단에서 실행 권한 강도를 실시간 조절 가능.
 
-| 보안 요소 | 상세 명세 |
-|---|---|
-| **Sandboxing** | 모든 작업 범위를 특정 프로젝트 폴더(`~/projects/q-agent/...`) 내부로 강제 격리 |
-| **HITL Popup** | 파일 수정, 터미널 명령 실행, 외부 브라우징 시 명시적 허가 팝업 노출 |
-| **Command Filter** | `rm -rf /` 등 위험 명령어 사전 차단 및 화이트리스트 기반 필터링 |
-| **작업 요약 뱃지** | 파일 생성·터미널·브라우저 제어 아이콘 분류 |
-| **Permission Scope** | "작업 범위: ~/projects/ 내부로 한정됨" 명시 |
-| **실행 환경 선택** | [WASM 실행] / [Remote 서버] / [로컬 즉시 적용] |
+### 6.1 실행 모드 정의
 
-**보안 프로필 등급:**
-- `Read-only`: 읽기만 허용
-- `Standard`: 프로젝트 폴더 내부만
-- `Advanced`: 원격 서버 접속 허용
+| 모드 | 동작 방식 | 대상 명령 |
+|---|---|---|
+| **Strict** | 모든 도구 호출 시 반드시 사용자 승인 필요 | 전종류 |
+| **Balanced** | 읽기 전용 작업은 자동 실행, 수정/삭제 작업은 승인 필요 | [자동] ls, cat, grep / [승인] rm, write, push |
+| **Agentic** | 위험도 분류기 기반 자동화. 이상 패턴 감지 시에만 승인 요청 | 시스템 파일 접근, 대량 삭제 등 비정상 패턴 |
+
+### 6.2 Agentic 위험도 분류기 (Risk Classifier)
+
+- **Engine**: Qwen 2.5 1.5B (소형 온디바이스 모델)
+- **역할**: 에이전트의 다음 행동(Tool Call)을 가로채어 의도의 위험성을 0~1 사이 점수로 평가.
+- **임계치**: `score > 0.7` 일 경우 강제 HITL 팝업 발생.
+
+### 6.3 Sandboxing & Isolation
+
+- **작업 격리**: 모든 작업 범위를 특정 프로젝트 폴더(`~/projects/q-agent/...`) 내부로 강제 격리.
+- **Command Filter**: 화이트리스트 기반의 명령어 필터링 및 위험 인자 사전 검증.
 
 ---
 
@@ -388,7 +401,8 @@ Project Override (프로젝트별 최종 설정 — 최우선)
 | 영역 | 기능 |
 |---|---|
 | **Computer Tab** | OS 조작 및 브라우징 과정을 실시간 미러링하여 보여주는 독립 뷰 |
-| **Artifact Library (Sidebar)** | 생성된 코드, 문서, 다이어그램 관리 및 즉시 편집/내보내기 (Claude 스타일) |
+| **Live Artifacts (Claude Style)** | 로컬 저장과 동시에 Tauri 별도 웹뷰 패널에서 실시간 렌더링 (.tsx, .html 등) |
+| **Workspace Sync** | 로컬 파일 수정 감지 시 아티팩트 뷰어가 즉시 갱신되는 'Hot-Reload' 지원 |
 | **Harness Studio** | 프로젝트 카드 + 페르소나 설정 + 연산량 상한 |
 | **Chat & Citation** | Perplexity형 인용 + Thought Trace 실시간 노출 |
 
@@ -463,6 +477,7 @@ Base URL: http://localhost:8765/api/v1
   - [/] 하네스 보안 등급 3종 (strict, standard 구현 완료)
   - [x] Global / Shared / Project 상속 체계
   - [x] Harness Studio UI 에디터
+- [x] **선택형 권한 오케스트레이터 (Strict / Balanced / Agentic)**
 - [x] HITL 승인 관문
 - [x] Artifact Panel (생성 + 독립 뷰)
 - [ ] @ 컨텍스트 참조 UI
@@ -493,6 +508,9 @@ Base URL: http://localhost:8765/api/v1
 - [ ] Ghost Prototyping WASM 샌드박스
 - [ ] Ghost Prototyping Remote Server 연동
 - [ ] Self-healing Loop (코드 → 실행 → 오류 → 재생성)
+- [ ] **OS-Native UI Tree Extraction (Rust Hooks)**
+- [ ] **Live Artifacts Hot-Reload (Tauri Webview)**
+- [ ] **Agentic 위험도 분류기 (Qwen 1.5B)**
 - [ ] MCP 도구 레지스트리 (fs, terminal, browser, ssh)
 - [ ] SSH Lab Bridge (연결 관리 + 로그 스트리밍)
 - [ ] Vision-Aided Computer Mode (화면 인식 + 조작)
@@ -551,5 +569,5 @@ Base URL: http://localhost:8765/api/v1
 
 ---
 
-*마지막 업데이트: 2026-05-13 · Master Plan v4.1 (방향 확정 및 로드맵 정제)*
+*마지막 업데이트: 2026-05-15 · Master Plan v4.3 (지능형 권한 제어 및 OS-Native 자동화 고도화)*
 *이 문서는 `docs/` 내에서만 관리되며 외부에 공개하지 않습니다.*
