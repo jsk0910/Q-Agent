@@ -1,8 +1,8 @@
-# Q-Agent Master Plan v4.1
+# Q-Agent Master Plan v4.2
 
-> **Version**: 4.1 · **Authored**: 2026-05-13 · **Updated**: 2026-05-13
-> **Status**: Active Blueprint — 방향 확정 및 로드맵 정제
-> **Replaces**: Plan.md v4.0 (2026-05-13)
+> **Version**: 4.2 · **Authored**: 2026-05-13 · **Updated**: 2026-05-15
+> **Status**: Active Blueprint — 생산성/안전성 강화 및 UI/UX 고도화
+> **Replaces**: Plan.md v4.1 (2026-05-13)
 
 ---
 
@@ -117,13 +117,25 @@ Project Private (파란 노드)
   → Final Answer + Source Cards
 ```
 
-### 2.3 외부 지식 신뢰도 시스템
+### 2.3 오프라인 검색 폴백 (Internal-only Mode)
+
+네트워크 단절 또는 Searxng 장애 시 자동으로 로컬 지식만을 사용하는 모드로 전환.
+- **동작 규칙**: 외부 웹 검색을 생략하고 `Project Private` 및 `Shared Pool` 지식 그래프만 탐색.
+- **답변 재구성**: "현재 오프라인 상태입니다. 로컬 지식 기반으로 답변을 생성합니다" 안내 및 신뢰도 점수 조정.
+
+### 2.4 로컬-클라우드 하이브리드 싱크 (E2EE)
+
+여러 기기 간 Mem0(장기 기억) 및 GraphRAG 인덱스 공유를 위한 동기화 메커니즘.
+- **E2EE (End-to-End Encryption)**: 모든 데이터는 로컬에서 AES-256-GCM으로 암호화된 후 클라우드(S3/WebDAV)로 전송.
+- **Sync Logic**: 기기별 타임스탬프 기반 충돌 해결 및 증분 업데이트 지원.
+
+### 2.5 외부 지식 신뢰도 시스템
 
 - **Perplexity형 출처 표기**: 모든 답변에 `[N]` 인용 번호 + 원문 팝업
 - **Reflection 패턴**: 정보의 최신성·도메인 권위도를 자기 성찰로 평가
 - **신뢰 등급**: ★★★★★ ~ ★☆☆☆☆ 시각적 표시
 
-### 2.4 신규 Rust 모듈
+### 2.6 신규 Rust 모듈
 
 ```
 harness/
@@ -160,11 +172,15 @@ harness/
 | **Embedder** | nomic-embed-text | CPU |
 | **Vision** | Qwen2-VL 7B | Phase 4 |
 
-### 3.3 Resource Governance
+### 3.3 Resource Governance & Auto-Mapping
 
-- **fvcore 연산량 슬라이더**: 단일 태스크 최대 GPU 연산량 상한 설정
-- **Iteration Cap**: Reflection 루프 최대 횟수 제한 (기본 5회)
-- **Budget Guard**: 토큰 예산 초과 시 자동 중단 + 사용자 알림
+- **하드웨어 티어별 자동 매핑**: VRAM(8GB, 12-16GB, 24GB) 감지 후 최적 모델 및 양자화(Q4/Q5/Q6) 자동 추천.
+- **자원 동적 스로틀링 (Power-Save Mode)**: 
+    - 하드웨어 온도(Thermal) 및 배터리 상태 실시간 감지.
+    - 임계치 초과 시 모델 양자화 수준 하향 또는 $fvcore$ 연산 속도 제한.
+- **fvcore 연산량 슬라이더**: 단일 태스크 최대 GPU 연산량 상한 설정.
+- **Iteration Cap**: Reflection 루프 최대 횟수 제한 (기본 5회).
+- **Budget Guard**: 토큰 예산 초과 시 자동 중단 + 사용자 알림.
 
 ### 3.4 ModelRunner Trait (Rust)
 
@@ -233,11 +249,18 @@ pub struct AgentState {
     pub citations:      Vec<Citation>,
     pub tool_log:       Vec<ToolCallRecord>,
     pub critic_score:   Option<f32>,
+    pub eval_report:    Option<EvalReport>, // Self-Eval 결과
     pub status:         AgentStatus,
     pub checkpoint_at:  DateTime<Utc>,
 }
 // 모든 상태 전환 → SurrealDB 자동 스냅샷
 ```
+
+### 4.4 에이전트 자가 평가 (Self-Eval)
+
+RAGAS 스타일의 평가 프레임워크를 내재화하여 에이전트 성능을 수치화.
+- **평가 지표**: 답변 신뢰도(Faithfulness), 답변 관련성(Answer Relevance), 계획 완수율(Task Completion).
+- **리포트**: 태스크 종료 시 사용자에게 성능 대시보드 및 개선 제안 노출.
 
 ---
 
@@ -269,15 +292,17 @@ pub struct AgentState {
 
 ---
 
-## 6. HITL 보안 관문 (Human-in-the-Loop)
+## 6. HITL & 제한적 MCP 보안 레이어
 
-고위험 작업 전 반드시 사용자 승인:
+모든 에이전트 작업은 Rust 기반 보안 레이어를 통해 격리 및 통제됨.
 
-| 요소 | 상세 |
+| 보안 요소 | 상세 명세 |
 |---|---|
+| **Sandboxing** | 모든 작업 범위를 특정 프로젝트 폴더(`~/projects/q-agent/...`) 내부로 강제 격리 |
+| **HITL Popup** | 파일 수정, 터미널 명령 실행, 외부 브라우징 시 명시적 허가 팝업 노출 |
+| **Command Filter** | `rm -rf /` 등 위험 명령어 사전 차단 및 화이트리스트 기반 필터링 |
 | **작업 요약 뱃지** | 파일 생성·터미널·브라우저 제어 아이콘 분류 |
 | **Permission Scope** | "작업 범위: ~/projects/ 내부로 한정됨" 명시 |
-| **Command Preview** | 실행 예정 명령어 모노스페이스 폰트로 노출 |
 | **실행 환경 선택** | [WASM 실행] / [Remote 서버] / [로컬 즉시 적용] |
 
 **보안 프로필 등급:**
@@ -348,24 +373,24 @@ Project Override (프로젝트별 최종 설정 — 최우선)
 
 ---
 
-## 8. UI / 디자인 시스템
+## 8. UI / 디자인 시스템 (Perplexity & Claude inspired)
 
 ### 8.1 Antigravity HUD (초기 런처)
 
 - `Alt + Space` 호출
-- 글래스모피즘 스타일 투명 바
-- **Project Switcher**: 활성 프로젝트 페르소나 빠른 전환
 - **Command Input**: Perplexity 스타일 통합 명령창
-- **Resource Monitor**: VRAM 점유율 + fvcore 잔여 실시간 표시
+- **Focus Mode (Focus Toggle)**: '디스커버, 재무, 코딩, 학술' 등 프로젝트 성격에 따른 검색 범위 및 모델 프리셋 전환
+- **Action Cards (워크플로우 프리셋)**: '보고서 만들기', '코드 디버깅' 등 자주 쓰는 에이전틱 워크플로우 템플릿
+- **Resource Monitor**: VRAM 점유율 + fvcore 잔여 + Power-Save 상태 표시
 
 ### 8.2 Main Mission Control (확장 대시보드)
 
 | 영역 | 기능 |
 |---|---|
-| **좌측 상단** Harness Studio | 프로젝트 카드 + 페르소나 설정 + 연산량 상한 |
-| **좌측 하단** Local NotebookLM | Drag-and-Drop 소스 등록 + Knowledge Graph 시각화 |
-| **중앙** Chat & Citation | Perplexity형 인용 + Thought Trace 실시간 노출 |
-| **우측** Artifacts Ready-Zone | 생성 중 파일 리스트 + Computer Mode Indicator |
+| **Computer Tab** | OS 조작 및 브라우징 과정을 실시간 미러링하여 보여주는 독립 뷰 |
+| **Artifact Library (Sidebar)** | 생성된 코드, 문서, 다이어그램 관리 및 즉시 편집/내보내기 (Claude 스타일) |
+| **Harness Studio** | 프로젝트 카드 + 페르소나 설정 + 연산량 상한 |
+| **Chat & Citation** | Perplexity형 인용 + Thought Trace 실시간 노출 |
 
 ### 8.3 GraphRAG 시각화
 
@@ -382,14 +407,6 @@ Project Override (프로젝트별 최종 설정 — 최우선)
 | **포인트** | Indigo Blue (#4F46E5) | Electric Cyan (#06B6D4) |
 | **텍스트** | Slate Gray 900 | Gray 100 |
 | **그림자** | Soft & Large | Outer Glow |
-
-### 8.5 인터랙션 흐름
-
-1. `Alt+Space` → HUD 호출
-2. 프로젝트 선택 → Mission Control 확장
-3. 질문 입력 → Thought Trace 실시간 표시
-4. 코딩 시작 → Split View 자동 전환 (채팅 | Ghost Prototyping)
-5. 완료 → HITL 승인 → 로컬 반영
 
 ---
 
@@ -425,7 +442,7 @@ Base URL: http://localhost:8765/api/v1
 
 ## 10. 개발 로드맵
 
-> 완전 새 시작 기준. 기존 구현 코드는 참조하되, 아키텍처는 V4.1 기준으로 재설계.
+> 완전 새 시작 기준. 기존 구현 코드는 참조하되, 아키텍처는 V4.2 기준으로 재설계.
 
 ### 🔴 Phase 0: 코어 기반 구축
 - [x] UI 프레임워크 확정 및 프로젝트 초기화 (React + Tauri v2)
@@ -449,6 +466,12 @@ Base URL: http://localhost:8765/api/v1
 - [x] HITL 승인 관문
 - [x] Artifact Panel (생성 + 독립 뷰)
 - [ ] @ 컨텍스트 참조 UI
+
+### 🟠 Phase 1.5: 모델 연동 및 안정화
+- [ ] 모델 체크포인트 다운로드 및 하드웨어별 최적화 검증
+- [ ] Phase 1 기능 점검 및 통합 테스트
+- [ ] 발견된 버그 픽스 및 성능 프로파일링
+- [ ] 자원 스로틀링(Throttling) 초기 로직 구현
 
 ### 🟡 Phase 2: 지식 베이스 (GraphRAG 2.0)
 - [ ] RAG 2.0 파이프라인
@@ -496,17 +519,19 @@ Base URL: http://localhost:8765/api/v1
 - [ ] Mobile 지원 (Tauri Mobile — iOS/Android)
 - [ ] Audio Overview (Whisper STT + Kokoro TTS)
 - [ ] 팀 워크스페이스 / 멀티 사용자
-- [ ] ntransformer 커스텀 커널 (DeepSeek, Qwen 독자 가속)
+- [ ] **ntransformer 가속화 아키텍처**
+  - [ ] Qwen 시리즈 모델 추론 최적화를 위한 연산 커널 직접 구현
+  - [ ] Rust + SIMD/FlashAttention 기반 추론 효율 극대화
 
 ---
 
 ## 11. 하드웨어별 추천 구성
 
-| 등급 | VRAM | 추천 모델 | 주요 용도 |
-|---|---|---|---|
-| **Entry** | 8GB | Llama 3.2 3B | 요약, 간단한 Q&A, 모바일 |
-| **Mid** | 12~16GB | Mistral NeMo 12B | Computer Mode, RAG 문서 분석 |
-| **High** | 20~24GB | Llama 3.1 70B / Qwen 2.5 72B | 대규모 프로젝트, Self-healing |
+| 등급 | VRAM | 자동 매핑 모델 (추천) | 양자화 | 주요 용도 |
+|---|---|---|---|---|
+| **Entry** | 8GB | Llama 3.2 3B / Qwen 2.5 3B | Q5_K_M | 요약, 간단한 Q&A, 모바일 |
+| **Mid** | 12~16GB | Mistral NeMo 12B / Qwen 2.5 14B | Q6_K | Computer Mode, RAG 문서 분석 |
+| **High** | 20~24GB | Llama 3.1 70B / Qwen 2.5 72B | Q4_K_M | 대규모 프로젝트, Self-healing |
 
 ---
 
