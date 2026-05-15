@@ -428,26 +428,26 @@ Base URL: http://localhost:8765/api/v1
 > 완전 새 시작 기준. 기존 구현 코드는 참조하되, 아키텍처는 V4.1 기준으로 재설계.
 
 ### 🔴 Phase 0: 코어 기반 구축
-- [ ] UI 프레임워크 확정 및 프로젝트 초기화 (React + Tauri v2)
-- [ ] SurrealDB 스키마 설계 (projects, conversations, knowledge, artifacts)
-- [ ] ModelRunner Trait 추상화 (llama.cpp 백엔드)
-- [ ] 기본 Chat UI + Streaming 응답
-- [ ] 프로젝트 생성·전환 기능
-- [ ] Antigravity HUD 기본 구현 (`Alt+Space` 런처)
+- [x] UI 프레임워크 확정 및 프로젝트 초기화 (React + Tauri v2)
+- [/] SurrealDB 스키마 설계 (projects, conversations, knowledge, artifacts)
+- [x] ModelRunner Trait 추상화 (llama.cpp 백엔드)
+- [x] 기본 Chat UI + Streaming 응답
+- [/] 프로젝트 생성·전환 기능
+- [x] Antigravity HUD 기본 구현 (`Alt+Space` 런처)
 
 ### 🟠 Phase 1: 에이전트 팀 + 템플릿 시스템
-- [ ] LangGraph 상태 머신 (Rust 자체 구현)
-- [ ] Planner / Critic / Coder / MLOps 에이전트
-- [ ] AgentState Checkpointing (SurrealDB 자동 스냅샷)
-- [ ] Budget Guard (토큰 예산 + Iteration Cap)
-- [ ] **페르소나·하네스·오케스트레이션 템플릿 시스템**
-  - [ ] YAML 기반 템플릿 정의 (personas/, harness/, orchestration/)
-  - [ ] 기본 템플릿 4종 제공 (researcher, coder, analyst, default)
-  - [ ] 하네스 보안 등급 3종 (strict, standard, advanced)
-  - [ ] Global / Shared / Project 상속 체계
-  - [ ] Harness Studio UI 에디터
-- [ ] HITL 승인 관문
-- [ ] Artifact Panel (생성 + 독립 뷰)
+- [x] LangGraph 상태 머신 (Rust 자체 구현)
+- [x] Planner / Critic / Coder / MLOps 에이전트
+- [x] AgentState Checkpointing (SurrealDB 자동 스냅샷)
+- [x] Budget Guard (토큰 예산 + Iteration Cap)
+- [x] **페르소나·하네스·오케스트레이션 템플릿 시스템**
+  - [x] YAML 기반 템플릿 정의 (personas/, harness/, orchestration/)
+  - [x] 기본 템플릿 4종 제공 (researcher, coder, analyst, default)
+  - [/] 하네스 보안 등급 3종 (strict, standard 구현 완료)
+  - [x] Global / Shared / Project 상속 체계
+  - [x] Harness Studio UI 에디터
+- [x] HITL 승인 관문
+- [x] Artifact Panel (생성 + 독립 뷰)
 - [ ] @ 컨텍스트 참조 UI
 
 ### 🟡 Phase 2: 지식 베이스 (GraphRAG 2.0)
