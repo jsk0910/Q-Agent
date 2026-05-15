@@ -1,0 +1,22 @@
+use_default_settings: true
+
+server:
+  # 아무 문자열이나 설정해도 무방합니다
+  secret_key: "q-agent-super-secret-key" 
+  port: 8080
+  bind_address: "0.0.0.0"
+  image_proxy: true
+
+search:
+  # 에이전트(PydanticAI)가 접근하기 위해 json 포맷 필수 활성화
+  formats:
+    - html
+    - json
+
+engines:
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+  - name: google
+    engine: google
+    shortcut: go

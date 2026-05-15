@@ -1,0 +1,49 @@
+services:
+  # 1. Llama.cpp 서버 (GPU 가속 활성화)
+  llama-server:
+    build:
+      context: https://github.com/ggml-org/llama.cpp.git
+      dockerfile: .devops/cuda.Dockerfile
+    container_name: q-agent-engine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: >
+      -m /models/qwen2.5-coder-7b-instruct-q4_k_m.gguf 
+      --host 0.0.0.0 
+      --port 8080 
+      -ngl 33 
+      -c 4096
+
+  # 2. SearXNG (개인용 검색 엔진)
+  searxng:
+    image: searxng/searxng:latest
+    container_name: q-agent-search
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./searxng:/etc/searxng
+    environment:
+      - SEARXNG_SETTINGS_PATH=/etc/searxng/settings.yml
+    restart: always
+
+  # 3. Q-Agent API 서버 (FastAPI + PydanticAI)
+  q-agent-api:
+    build: ./server
+    container_name: q-agent-api-server
+    ports:
+      - "8000:8000"
+    depends_on:
+      - llama-server
+      - searxng
+    environment:
+      - LLAMA_API_URL=http://llama-server:8080/v1
+      - SEARXNG_URL=http://searxng:8080
