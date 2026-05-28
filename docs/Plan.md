@@ -1,8 +1,8 @@
-# Q-Agent Master Plan v4.4
+# Q-Agent Master Plan v4.5
 
-> **Version**: 4.4 · **Authored**: 2026-05-15 · **Updated**: 2026-05-15  
-> **Status**: Active Blueprint — 서버-클라이언트 확장성, 보안 재정비, 디자인 시스템 고도화 반영  
-> **Replaces**: Plan.md v4.3 (2026-05-15)
+> **Version**: 4.5 · **Authored**: 2026-05-28 · **Updated**: 2026-05-28  
+> **Status**: Active Blueprint — 디자인 시스템 v4.5 재정비, Phase 1.5 디자인 완료, 보안·서버-클라이언트 확장성 반영  
+> **Replaces**: Plan.md v4.4 (2026-05-15)
 
 ***
 
@@ -392,12 +392,187 @@ Project Override
 
 ## 8. UI / 디자인 시스템 (Perplexity + Claude + Open WebUI 참고)
 
-### 8.1 디자인 원칙
+## 8-1. 디자인 재정비 체크리스트
 
-- **기본 방향**: "Research-grade productivity" — 지나치게 장식적이지 않고, 정보 구조와 작업 흐름을 우선한다.
-- **서버-클라이언트 확장성**을 고려해 데스크톱과 브라우저에서 동일한 정보 구조를 유지한다.
-- **Claude식 Artifacts 작업감 + Perplexity식 검색/인용 가독성 + Open WebUI식 실용적인 멀티 패널 탐색성**을 조합한다.
-- 초기 다크 네온 중심 그래픽은 축소하고, 장시간 사용에 적합한 **차분한 중성 계열 + 제한된 포인트 컬러** 중심으로 재설계한다.
+Phase 1.5에서 디자인 변경을 감성적 리뉴얼이 아닌, **작업성·일관성·확장성·접근성 중심의 제품 디자인 재정비**로 다룬다.
+
+> **Design System v4.5** (`docs/Design.md`)가 이 체크리스트의 산출물이며, 각 항목 상태는 그에 따라 갱신되었다.
+
+### 8-1-1. 목표
+
+- 장시간 사용에 적합한 **Research-grade productivity UI** 방향으로 정리
+- 데스크톱(Tauri)과 브라우저/PWA에서 **동일한 정보 구조** 유지
+- Claude식 Artifacts 작업 흐름, Perplexity식 검색/인용 가독성, Open WebUI식 멀티 패널 탐색성을 조합
+- 기존 네온/과장된 시각 효과 중심 표현은 축소하고, **중성 컬러 기반 + 제한된 강조색** 중심으로 재설계
+- 디자인 시스템을 토큰, 컴포넌트, 패턴, 접근성, 문서화 단위로 정리
+
+### 8-1-2. 점검 방식
+
+각 항목은 아래 4단계 중 하나로 관리한다.
+
+- `미정`: 방향 또는 기준이 아직 없음
+- `설계중`: 원칙 또는 초안이 정의됨
+- `확정`: 디자인 기준이 문서로 확정됨
+- `구현완료`: 실제 UI에 반영되고 검증됨
+
+---
+
+### 8-1-3. 디자인 방향 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 제품 디자인 한 줄 정의가 문서화되었는가 | 확정 | "Research-grade local agent workspace" (Design.md §0) |
+| 핵심 레퍼런스(Perplexity / Claude / Open WebUI / HUD 계열)가 역할별로 정리되었는가 | 확정 | Design.md §0 — 검색, 인용, 아티팩트, 런처 역할 구분 |
+| "데모형 네온 UI"에서 "장시간 작업용 UI"로 방향 전환이 명시되었는가 | 확정 | Design.md §0 방향 전환 선언 반영 |
+| 라이트/다크/고대비 대응 방향이 분리 정의되었는가 | 확정 | Design.md §2 (Light / Dark / Forced-Colors 3종) |
+| 멀티 클라이언트 환경에서도 동일한 정보 구조를 유지하는 원칙이 있는가 | 확정 | Design.md §5.1, §13 — 3영역 구조 + 멀티클라이언트 기준 |
+
+---
+
+### 8-1-4. 정보 구조 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 기본 레이아웃(좌측 탐색 / 중앙 작업 / 우측 컨텍스트)이 확정되었는가 | 확정 | Design.md §5.1 — 3영역 구조 기본값 |
+| HUD, Chat, Artifacts, Knowledge Map, Sessions의 관계가 명확한가 | 확정 | Design.md §5.3~5.5 레이아웃 전체 |
+| 현재 프로젝트 / 세션 / 권한 모드 / 네트워크 상태가 항상 드러나는가 | 확정 | Design.md §7.1 상태 배지 — Global Header 상시 표시 |
+| 사용자가 3단계 이내에 핵심 작업(질문, 승인, 결과 확인)에 도달 가능한가 | 설계중 | HUD → 채팅 → 결과/승인 흐름 — 구현 시 검증 필요 |
+| 패널 접기, 고정, 리사이즈 규칙이 정의되었는가 | 확정 | Design.md §5.2 패널 UX 규칙 |
+
+---
+
+### 8-1-5. 컬러 시스템 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 기본 중성 팔레트(Neutral Gray / Warm White / Slate)가 정의되었는가 | 확정 | Light: Warm Off-white / Dark: Slate (#0F1117) |
+| 강조색은 Indigo 단일로 제한되는가 | 확정 | Indigo 600 (Light) / Indigo 500 (Dark), Teal 제거 |
+| 성공/경고/위험/정보 상태색이 분리되어 있는가 | 확정 | Design.md §2 — 의미 컬러 4종 |
+| 권한/위험/승인 색과 검색/지식/아티팩트 색의 의미가 충돌하지 않는가 | 확정 | 상태색(의미 전달)과 GraphRAG 노드색(영역 구분) 역할 분리 |
+| 다크 모드가 glow 없이도 충분한 대비와 위계를 제공하는가 | 확정 | 저채도 Slate 계열, shadow-glow / Cyan Electric 완전 제거 |
+| 고대비 모드 또는 forced-colors 환경 대응 원칙이 있는가 | 확정 | Design.md §2.3 forced-colors CSS 대응 |
+
+---
+
+### 8-1-6. 타이포그래피 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 채팅, 문서, 설정, 코드 화면별 타입 스케일이 정의되었는가 | 확정 | Design.md §3 화면별 타입 역할 표 |
+| 긴 답변과 인용문에 적절한 줄 길이와 행간 기준이 있는가 | 확정 | prose-width 72ch, leading-relaxed 1.75 |
+| 코드 폰트와 일반 텍스트 폰트의 역할이 분리되었는가 | 확정 | font-ui (Geist) / font-code (Geist Mono) |
+| 리소스/토큰/로그 등 수치 데이터의 숫자 가독성 기준이 있는가 | 확정 | text-xs + tabular-nums |
+| 제목, 패널 헤더, 본문, 보조 텍스트의 위계가 명확한가 | 확정 | text-primary / secondary / tertiary / muted 4단계 |
+
+---
+
+### 8-1-7. 간격 / 밀도 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| spacing, radius, shadow 값이 토큰으로 정리되었는가 | 확정 | Design.md §4 토큰 정의 표 |
+| 채팅, 설정, 프로젝트 목록, 아티팩트 화면 간 밀도 차이가 과도하지 않은가 | 확정 | Design.md §4 밀도 기준표 |
+| 전문가용 도구답게 정보 밀도는 높되 클릭 타깃은 충분한가 | 확정 | 버튼(36px+), 리스트(40px) |
+| 카드, 패널, 툴바, 리스트 행 높이가 일관적인가 | 확정 | Design.md §4 기준 확립 |
+| 작은 화면에서는 접고 큰 화면에서는 펼치는 규칙이 정리되었는가 | 확정 | Design.md §13 브레이크포인트 |
+
+---
+
+### 8-1-8. 핵심 컴포넌트 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 버튼 체계(primary / secondary / ghost / danger)가 정리되었는가 | 확정 | Design.md §6.1 |
+| 입력창 체계(chat / search / form / code editor)가 분리되었는가 | 확정 | Design.md §6.2 |
+| 상태 배지(Local-only / LAN / Agentic / Approval Needed)가 정의되었는가 | 확정 | Design.md §7.1 |
+| 탭, 아코디언, 드로어, 모달의 시각/동작 규칙이 통일되었는가 | 확정 | Design.md §11 애니메이션 |
+| Source Card, Citation Chip, Artifact Card, Session Card가 동일한 디자인 언어를 따르는가 | 확정 | Design.md §8 핵심 컴포넌트 |
+
+---
+
+### 8-1-9. 상호작용 패턴 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 채팅 + 인용 + 원문 열람 패턴이 정의되었는가 | 확정 | Design.md §8.2, §8.4 |
+| 승인 요청(Approval Needed) 패턴이 정의되었는가 | 확정 | 위험도 시각화, 승인/거절, 이력 보기 (Design.md §8.5) |
+| 아티팩트 패턴(Preview / Code / Diff / Fullscreen)이 정리되었는가 | 확정 | Design.md §8.3 — 4탭 구조 |
+| 검색 공급자 장애 시 fallback UI가 정의되었는가 | 확정 | Design.md §10 — fallback 배너 및 오프라인 상태 정의 |
+| 빈 상태 / 로딩 상태 / 오류 상태 / 재시도 상태가 설계되었는가 | 확정 | Design.md §10 — 7가지 상태 정의 |
+
+---
+
+### 8-1-10. 멀티 클라이언트 대응 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| Tauri Desktop과 Browser/PWA가 동일한 정보 구조를 공유하는가 | 확정 | Design.md §5.1, §13 — 3영역 구조 공유 |
+| Browser/PWA에서 축소 또는 비활성화할 기능이 정의되었는가 | 확정 | Design.md §13.2 기능 대응표 (10개 기능 분류) |
+| Local-only / LAN Share / Offline 상태가 UI에 명확히 표시되는가 | 확정 | Design.md §7.1 상태 배지 — Global Header 상시 표시 |
+| 원격 세션에서 로컬 전용 기능이 명확히 제한되는가 | 확정 | Design.md §13.2 — 로컬 모델 실행, 파일 직접 접근 제한 |
+| 여러 클라이언트 동시 접속 시 승인/세션 충돌 방지 규칙이 있는가 | 설계중 | 백엔드 세션 관리 설계 필요 |
+
+---
+
+### 8-1-11. 접근성 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 텍스트와 UI 컨트롤 대비가 WCAG 기준을 만족하는가 | 확정 | 텍스트 4.5:1, 컨트롤 3:1 (Design.md §14) |
+| 키보드만으로 HUD, 채팅, 승인, 탭 전환이 가능한가 | 확정 | Design.md §14 키보드 네비게이션 전체 정의 |
+| 포커스 링이 충분히 잘 보이는가 | 확정 | 2px Indigo solid, outline-offset: 2px |
+| 아이콘 전용 버튼에 라벨 또는 툴팁이 있는가 | 확정 | aria-label 또는 title 필수 (Design.md §12) |
+| 애니메이션/시각 효과에 대한 축소 옵션이 있는가 | 확정 | prefers-reduced-motion 즉시 전환(0ms) 대체 |
+| 고대비 모드와 forced-colors 환경에서 핵심 정보가 유지되는가 | 확정 | Design.md §2.3 forced-colors 전체 대응 |
+
+---
+
+### 8-1-12. 성능 체감 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 초기 진입 시 가장 중요한 패널이 우선 노출되는가 | 확정 | 채팅 패널 우선 렌더, GraphRAG·Artifact lazy (Design.md §15) |
+| GraphRAG 맵, Artifact Preview, Diff 뷰가 과도하게 무겁지 않은가 | 확정 | 노드 100+ 가상화, iframe sandbox (Design.md §15) |
+| 스켈레톤, 스트리밍, 점진적 로딩 전략이 있는가 | 확정 | Design.md §15 — 전략 정의 |
+| 토큰 스트리밍 중 레이아웃 점프가 없는가 | 확정 | min-height 예약, 점진적 DOM 삽입 |
+| 저사양 환경에서도 애니메이션/이펙트가 부담되지 않는가 | 확정 | Reduced Motion 적용, 파티클·이펙트 없음 |
+
+---
+
+### 8-1-13. 문서화 / 거버넌스 체크리스트
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| 디자인 토큰 문서가 존재하는가 | 확정 | Design.md §2~4 — 색상/타이포/간격 토큰 전체 |
+| 컴포넌트 카탈로그가 존재하는가 | 설계중 | Design.md §6~9 ASCII 스펙 — Storybook 전환 예정 |
+| 화면별 패턴 문서가 존재하는가 | 설계중 | Design.md §5, §10 기준 수립 — 세부 화면 문서화 예정 |
+| 변경 이력과 버전 관리 규칙이 정리되어 있는가 | 확정 | Design.md §16 변경 이력 표 |
+| 디자인-개발 간 handoff 기준이 존재하는가 | 설계중 | 토큰 → Tailwind CSS 변수 매핑 기준 수립 필요 |
+
+---
+
+### 8-1-14. 우선순위
+
+초기에는 모든 요소를 한 번에 정교화하지 않는다. 가장 자주 쓰이는 화면과 패턴부터 정리한다.
+
+1. Chat & Citation
+2. Artifacts Studio
+3. Harness Studio
+4. Sessions / Approvals
+5. Knowledge Map
+6. Settings / Models / Network
+
+### 8-1-15. 산출물
+
+Phase 1.5 종료 시 아래 산출물을 확보한다.
+
+- ✅ 디자인 방향 문서 1부 (`docs/Design.md` v4.5)
+- ✅ 디자인 토큰 정의서 1부 (Design.md §2~4)
+- 🔄 핵심 화면 와이어프레임 세트 (ASCII 스펙 반영 — Storybook 전환 예정)
+- 🔄 핵심 컴포넌트 목록 및 상태 정의 (Design.md §6~9 — 구현 검증 필요)
+- ✅ 다크/라이트/고대비 기준안 (Design.md §2)
+- ✅ Desktop / Browser(PWA) 레이아웃 가이드 (Design.md §13)
+- ✅ 접근성 및 성능 점검 결과 (Design.md §14~15)
 
 ### 8.2 Antigravity HUD (초기 런처)
 
@@ -551,20 +726,22 @@ Optional LAN Mode: http://0.0.0.0:8765/api/v1
 - [x] **선택형 권한 오케스트레이터 (Strict / Balanced / Agentic)**
 - [x] HITL 승인 관문
 - [x] Artifact Panel (생성 + 독립 뷰)
-- [ ] @ 컨텍스트 참조 UI
+- [/] @ 컨텍스트 참조 UI
 
 ### 🟠 Phase 1.5: 프로젝트 재정비
-- [ ] **구현 현황 감사(Audit)**: 현재 코드베이스와 Plan v4.4 간 차이 분석
+- [ ] **구현 현황 감사(Audit)**: 현재 코드베이스와 Plan v4.5 간 차이 분석
 - [ ] **구조 재정비**: UI/상태관리/API 경계를 정리하고 기술 부채 목록화
 - [ ] **테스트 계획 수립**
   - [ ] 단위 테스트 범위 정의 (Rust core, agent state, policy)
   - [ ] 통합 테스트 시나리오 정의 (chat, artifact, approval, search)
   - [ ] E2E 테스트 시나리오 정의 (desktop, browser client, permission flow)
-- [ ] **디자인 계획 재수립**
-  - [ ] 디자인 토큰 정의 (color, spacing, typography, panel layout)
-  - [ ] 핵심 화면 와이어프레임/HUD/대시보드/아티팩트 스튜디오 정리
-  - [ ] 다크/라이트 모드 기준안 확정
-  - [ ] PWA/브라우저 축약 레이아웃 가이드 수립
+- [x] **디자인 계획 재수립** (Design System v4.5 완료)
+  - [x] 디자인 토큰 정의 (color, spacing, typography, panel layout)
+  - [x] 핵심 화면 와이어프레임/HUD/대시보드/아티팩트 스튜디오 정리
+  - [x] 다크/라이트/고대비 모드 기준안 확정
+  - [x] PWA/브라우저 축약 레이아웃 가이드 수립
+  - [x] 접근성 및 성능 체감 기준 수립
+  - [/] 컴포넌트 카탈로그 및 handoff 기준 (설계 중)
 - [ ] **네트워크 및 보안 점검/계획**
   - [ ] AaaS API 인증/인가 구조 설계
   - [ ] CORS, Origin, WebSocket 인증 전략 설계
@@ -607,6 +784,7 @@ Optional LAN Mode: http://0.0.0.0:8765/api/v1
 - [ ] AaaS REST API 서버 (axum 기반)
 - [ ] **PWA Client (읽기/채팅/승인 중심)**
 - [ ] **세션/승인 센터 UI**
+- [ ] **Trajectory Timeline & 자가 평가 대시보드 UI 구현**
 - [ ] **백업 & 동기화**
   - [ ] AES-256-GCM 암호화 내보내기/가져오기
   - [ ] 로컬 백업 스케줄러
@@ -647,7 +825,7 @@ Optional LAN Mode: http://0.0.0.0:8765/api/v1
 
 ***
 
-## 13. 확정된 방향 (v4.4 기준)
+## 13. 확정된 방향 (v4.5 기준)
 
 | 항목 | 결정 | 비고 |
 |---|---|---|
@@ -660,10 +838,11 @@ Optional LAN Mode: http://0.0.0.0:8765/api/v1
 | **멀티 클라이언트 구조** | ✅ 방향 확정 | Local Server Core + Browser/PWA 확장 |
 | **PWA Client** | ✅ 조기 반영 | Mobile 전 단계 대체 수단으로 Phase 3 |
 | **보안 기본 정책** | ✅ 확정 | Local-only 기본, 원격 접근은 선택 활성화 |
+| **디자인 시스템** | ✅ 확정 | Research-grade UI, Indigo 강조, 저채도 다크 (Design.md v4.5) |
 | **Finance Agent** | 🔶 후순위 확정 | 코어 완성 후 Phase 4 |
 | **음성 I/O (TTS/STT)** | ⏸️ 최후순위 | Phase 5 |
 | **Mobile** | ⏸️ 최후순위 | Phase 5 — 코어/PWA/데스크톱 우선 |
 
 ***
 
-*마지막 업데이트: 2026-05-15 · Master Plan v4.4 (서버-클라이언트 확장성, 보안 재정비, 디자인 시스템 고도화 반영)*
+*마지막 업데이트: 2026-05-28 · Master Plan v4.5 (디자인 시스템 v4.5 재정비, Phase 1.5 디자인 완료 반영)*

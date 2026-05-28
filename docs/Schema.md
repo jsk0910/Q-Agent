@@ -1,6 +1,6 @@
-# Q-Agent Data Schema v4.1
+# Q-Agent Data Schema v4.5
 
-> **Version**: 4.1 · **Authored**: 2026-05-13
+> **Version**: 4.5 · **Authored**: 2026-05-28
 > **Database**: SurrealDB 2.x
 > **Convention**: SCHEMAFULL, UUIDs, 소프트 삭제(`deleted_at`)
 
@@ -300,6 +300,7 @@ DEFINE FIELD model_path   ON model_registry TYPE option<string>;  -- 로컬 GGUF
 DEFINE FIELD api_endpoint ON model_registry TYPE option<string>;  -- 원격 API URL
 DEFINE FIELD context_size ON model_registry TYPE int DEFAULT 8192;
 DEFINE FIELD vram_required_gb ON model_registry TYPE option<float>;
+DEFINE FIELD expected_tok_s   ON model_registry TYPE option<float>;
 DEFINE FIELD supports_vision  ON model_registry TYPE bool DEFAULT false;
 DEFINE FIELD is_embedding     ON model_registry TYPE bool DEFAULT false;
 DEFINE FIELD embedding_dim    ON model_registry TYPE option<int>;  -- 임베딩 차원
@@ -405,5 +406,5 @@ project ──1:N──► conversation ──1:N──► message
 
 ---
 
-*마지막 업데이트: 2026-05-13 · Schema v4.1*
+*마지막 업데이트: 2026-05-28 · Schema v4.5*
 *이 문서는 `docs/` 내에서만 관리되며 외부에 공개하지 않습니다.*

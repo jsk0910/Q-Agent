@@ -1,6 +1,6 @@
-# Q-Agent AI Code Conduct v4.1
+# Q-Agent AI Code Conduct v4.5
 
-> **Version**: 4.1 · **Authored**: 2026-05-13
+> **Version**: 4.5 · **Authored**: 2026-05-28
 > **목적**: Q-Agent 프로젝트에서 작업하는 AI 코딩 에이전트를 위한 행동 규범 및 개발 지침
 
 ---
@@ -19,8 +19,8 @@
 ```
 Q-Agent/
 ├── docs/                   ← 내부 문서 (공개 금지)
-│   ├── Plan.md             ← 마스터 플랜 (v4.1)
-│   ├── Design.md           ← 디자인 시스템
+│   ├── Plan.md             ← 마스터 플랜 (v4.5)
+│   ├── Design.md           ← 디자인 시스템 (v4.5)
 │   ├── AI_Code_Conduct.md  ← 이 문서
 │   └── Schema.md           ← 데이터 스키마
 ├── app/                    ← React + Tauri v2 앱 루트
@@ -283,5 +283,5 @@ chore: 빌드, 설정 변경
 
 ---
 
-*마지막 업데이트: 2026-05-13 · AI Code Conduct v4.1*
+*마지막 업데이트: 2026-05-28 · AI Code Conduct v4.5*
 *이 문서는 `docs/` 내에서만 관리되며 외부에 공개하지 않습니다.*
