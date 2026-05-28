@@ -61,8 +61,36 @@ DEFINE FIELD duration_ms     ON message TYPE option<int>;
 DEFINE FIELD created_at      ON message TYPE datetime DEFAULT time::now();
 DEFINE INDEX idx_msg_conv ON message FIELDS conversation_id;
 
+-- Artifact (결과물)
+DEFINE TABLE artifact SCHEMAFULL;
+DEFINE FIELD id              ON artifact TYPE string;
+DEFINE FIELD conversation_id ON artifact TYPE record<conversation>;
+DEFINE FIELD type            ON artifact TYPE string  -- 'code' | 'doc' | 'diagram'
+    ASSERT $value IN ['code', 'doc', 'diagram'];
+DEFINE FIELD name            ON artifact TYPE string;
+DEFINE FIELD content         ON artifact TYPE string;
+DEFINE FIELD language        ON artifact TYPE option<string>;
+DEFINE FIELD path            ON artifact TYPE option<string>;  -- 로컬 저장 경로
+DEFINE FIELD created_at      ON artifact TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at      ON artifact TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_art_conv ON artifact FIELDS conversation_id;
+
+-- Knowledge (지식 베이스)
+DEFINE TABLE knowledge SCHEMAFULL;
+DEFINE FIELD id         ON knowledge TYPE string;
+DEFINE FIELD project_id ON knowledge TYPE record<project>;
+DEFINE FIELD source     ON knowledge TYPE string;  -- 파일명 or URL
+DEFINE FIELD type       ON knowledge TYPE string  -- 'file' | 'web' | 'graph'
+    ASSERT $value IN ['file', 'web', 'graph'];
+DEFINE FIELD content    ON knowledge TYPE string;  -- 원문 or 요약
+DEFINE FIELD embedding  ON knowledge TYPE option<array<float>>;  -- 벡터
+DEFINE FIELD metadata   ON knowledge TYPE object;
+DEFINE FIELD created_at ON knowledge TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_knw_project ON knowledge FIELDS project_id;
+
 -- Settings (앱 설정)
 DEFINE TABLE app_settings SCHEMAFULL;
+-- ... (rest of the file remains same)
 
 -- 싱글톤 레코드 (id: "global")
 DEFINE FIELD id          ON app_settings TYPE string;

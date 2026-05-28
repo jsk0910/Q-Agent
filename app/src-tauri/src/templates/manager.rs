@@ -61,6 +61,17 @@ access_paths: ["./workspace"]
         fs::write(strict_harness, yaml)?;
     }
 
+    let advanced_harness = harness_dir.join("advanced.yaml");
+    if !advanced_harness.exists() {
+        let yaml = r#"name: Advanced
+description: 모든 도구 접근 허용 (원격 서버 및 도커 포함)
+security_level: advanced
+allowed_tools: ["fs_read", "fs_write", "terminal", "browser", "ssh"]
+access_paths: ["/"]
+"#;
+        fs::write(advanced_harness, yaml)?;
+    }
+
     let orch_dir = app_data_dir.join("templates/orchestration");
     let default_orch = orch_dir.join("balanced.yaml");
     if !default_orch.exists() {

@@ -1,4 +1,5 @@
 pub mod manager;
+pub mod entities;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

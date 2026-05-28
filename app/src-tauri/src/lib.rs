@@ -31,11 +31,12 @@ pub fn run() {
                 tracing::error!("Failed to initialize default templates: {}", e);
             }
 
-            tauri::async_runtime::block_on(async {
-                let _db = db::Database::init("memory")
+            let db = tauri::async_runtime::block_on(async {
+                db::Database::init("memory")
                     .await
-                    .expect("Failed to init database");
+                    .expect("Failed to init database")
             });
+            _app.manage(db);
 
             // Alt+Space 단축키 등록
             let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Space);
@@ -64,10 +65,56 @@ pub fn run() {
             models::manager::download_model,
             templates::manager::list_templates,
             templates::manager::get_template_content,
-            templates::manager::save_template_content
+            templates::manager::save_template_content,
+            create_project,
+            list_projects,
+            delete_project,
+            create_conversation,
+            list_conversations,
+            list_messages,
+            send_chat_message
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+use crate::db::Database;
+use crate::models::entities::{Project, Conversation, Message};
+use tauri::State;
+
+#[tauri::command]
+pub async fn create_project(db: State<'_, Database>, project: Project) -> Result<Project, String> {
+    db.create_project(project).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_projects(db: State<'_, Database>) -> Result<Vec<Project>, String> {
+    db.list_projects().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_project(db: State<'_, Database>, id: String) -> Result<(), String> {
+    db.delete_project(&id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn create_conversation(db: State<'_, Database>, conv: Conversation) -> Result<Conversation, String> {
+    db.create_conversation(conv).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_conversations(db: State<'_, Database>, project_id: Option<String>) -> Result<Vec<Conversation>, String> {
+    db.list_conversations(project_id.as_deref()).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn list_messages(db: State<'_, Database>, conversation_id: String) -> Result<Vec<Message>, String> {
+    db.list_messages(&conversation_id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn send_chat_message(db: State<'_, Database>, msg: Message) -> Result<Message, String> {
+    db.save_message(msg).await.map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

@@ -3,6 +3,8 @@ use surrealdb::engine::local::{Db, Mem};
 use surrealdb::Surreal;
 
 pub mod checkpoint;
+pub mod projects;
+pub mod conversations;
 
 // Q-Agent 데이터베이스 연결 관리 구조체
 #[derive(Clone)]
