@@ -37,6 +37,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const loadData = async () => {
     setLoading(true);
+    if (!('__TAURI_INTERNALS__' in window)) {
+      setSpecs({ total_memory_mb: 16384, used_memory_mb: 8192, cpu_cores: 8 });
+      setModels([{ id: 'mock', name: 'Mock Model', description: 'Mock', parameters: '7B', required_ram_mb: 8192, download_url: '', file_name: '', is_downloaded: false }]);
+      setLoading(false);
+      return;
+    }
     try {
       const [sysSpecs, availModels] = await Promise.all([
         invoke<SystemSpecs>('get_system_specs'),
@@ -52,6 +58,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   const handleDownload = async (modelId: string) => {
+    if (!('__TAURI_INTERNALS__' in window)) {
+      setModels(models.map(m => m.id === modelId ? { ...m, is_downloaded: true } : m));
+      return;
+    }
     try {
       await invoke('download_model', { modelId });
       // 낙관적 업데이트 또는 상태 폴링
@@ -131,7 +141,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <div className="space-y-4">
                 {models.map(model => {
                   const requiredGb = model.required_ram_mb / 1024;
-                  const totalGb = specs ? specs.total_memory_mb / 1024 : 0;
                   const isOOM = specs ? (model.required_ram_mb > specs.total_memory_mb) : false;
                   const isWarning = specs ? (model.required_ram_mb > (specs.total_memory_mb - specs.used_memory_mb)) : false;
 

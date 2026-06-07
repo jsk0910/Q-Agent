@@ -52,7 +52,7 @@ DEFINE FIELD conversation_id ON message TYPE record<conversation>;
 DEFINE FIELD role            ON message TYPE string  -- 'user' | 'assistant' | 'system'
     ASSERT $value IN ['user', 'assistant', 'system'];
 DEFINE FIELD content         ON message TYPE string;
-DEFINE FIELD citations       ON message TYPE array<object>;
+DEFINE FIELD citations       ON message TYPE array<object> DEFAULT [];
 DEFINE FIELD thought_trace   ON message TYPE array<object> DEFAULT [];
 DEFINE FIELD artifact_ids    ON message TYPE array<string> DEFAULT [];
 DEFINE FIELD model_used      ON message TYPE option<string>;

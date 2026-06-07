@@ -1,24 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Command, File, Archive, Database } from 'lucide-react';
-import { ChatMessage, Message } from './ChatMessage';
+import { ChatMessage } from './ChatMessage';
+import { Message, useAppStore } from '../../stores/useAppStore';
+import { useArtifactStore } from '../../stores/useArtifactStore';
 
 export const ChatArea: React.FC = () => {
+  const { 
+    messages, setMessages, activeProject, activeCitations,
+    isRightPanelOpen, permissionMode 
+  } = useAppStore();
   const [input, setInput] = useState('');
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I am Q-Agent. How can I help you with your project today?',
-      traces: [
-        { agent: 'System', step: 'Initialized environment' },
-        { agent: 'Router', step: 'Ready for input' }
-      ]
-    }
-  ]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const mockContexts = [
     { name: 'main.rs', type: 'file', icon: <File size={14} /> },
@@ -53,30 +53,169 @@ export const ChatArea: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    const messageToSend = input.trim();
+    if (!messageToSend) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: messageToSend,
     };
+    
+    // Save user message to DB if we have a project
+    if (activeProject && window.__TAURI_INTERNALS__) {
+      const pid = typeof activeProject.id === 'string' ? activeProject.id : (activeProject.id?.id?.String || activeProject.id?.id);
+      import('@tauri-apps/api/core').then(({ invoke }) => {
+        // Need to fetch conv ID first, or just use send_chat_message which we'll adapt
+        // Actually, we can fetch history to get the conversation ID, but let's assume we can fetch it, 
+        // or just ignore saving for now and do it inside the backend.
+      });
+    }
 
     setMessages([...messages, userMessage]);
     setInput('');
     setShowMentions(false);
     
-    // Simulate streaming response
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'This is a simulated response from the Mock Llama backend.',
-        traces: [
-          { agent: 'Planner', step: 'Analyzed request' },
-          { agent: 'Executor', step: 'Generated mock response' }
-        ]
-      }]);
-    }, 1000);
+    // Set initial loading state
+    const loadingId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, {
+      id: loadingId,
+      role: 'assistant',
+      content: '',
+      traces: [
+        { agent: 'Planner', step: 'Calling Llama.cpp backend...' }
+      ]
+    }]);
+
+    // Call Q-Agent API
+    const callBackend = async () => {
+      try {
+        let replyContent = '';
+        let citations: any[] = [];
+        
+        // Extract mentions from message
+        const mentionRegex = /@([\w\-\.]+)/g;
+        const mentions = [];
+        let match;
+        while ((match = mentionRegex.exec(messageToSend)) !== null) {
+          mentions.push(match[1]);
+        }
+        
+        // @ts-ignore
+        if (window.__TAURI_INTERNALS__) {
+          // Tauri Desktop Environment -> Use Rust LangGraph Workflow
+          // @ts-ignore
+          const { invoke } = window.__TAURI__?.core || await import('@tauri-apps/api/core');
+          
+          let pId = null;
+          if (activeProject) {
+            if (typeof activeProject.id === 'string') {
+              pId = activeProject.id;
+            } else if (activeProject.id?.id?.String) {
+              pId = activeProject.id.id.String;
+            } else if (activeProject.id?.id) {
+              pId = activeProject.id.id;
+            }
+          }
+
+          const response = await invoke('run_agent_workflow', {
+            message: messageToSend,
+            projectId: pId,
+            harnessType: activeProject?.harness || 'deep_research',
+            permissionMode: permissionMode,
+            mentions: mentions
+          }) as { answer: string; citations: any[]; artifacts?: any[] };
+          
+          replyContent = response.answer;
+          citations = response.citations || [];
+          
+          if (response.artifacts) {
+            response.artifacts.forEach(artifact => {
+              useArtifactStore.getState().addArtifact(artifact);
+            });
+          }
+
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === loadingId) {
+              return { ...msg, content: replyContent, citations, traces: [{ agent: 'Executor', step: 'Generated response' }] };
+            }
+            return msg;
+          }));
+        } else {
+          // Web Browser Environment -> SSE 스트리밍 엔드포인트 호출
+          const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+          const response = await fetch(`${apiBase}/chat/stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: messageToSend,
+              harness_type: activeProject?.harness || 'general',
+              permission_mode: permissionMode,
+            }),
+          });
+
+          if (!response.ok || !response.body) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.event === 'token') {
+                  replyContent += data.token;
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === loadingId
+                      ? { ...msg, content: replyContent, traces: [{ agent: 'Executor', step: 'Streaming...' }] }
+                      : msg
+                  ));
+                } else if (data.event === 'done') {
+                  citations = (data.citations || []).map((c: any) => ({
+                    index: c.index,
+                    source_id: c.source_id,
+                    excerpt: c.excerpt,
+                    confidence: c.confidence,
+                  }));
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === loadingId
+                      ? { ...msg, content: replyContent, citations, traces: [{ agent: 'Executor', step: 'Generated response' }] }
+                      : msg
+                  ));
+                } else if (data.event === 'error') {
+                  throw new Error(data.detail);
+                }
+              } catch (parseErr) {
+                // 파싱 오류는 무시 (빈 줄 등)
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch from backend:', error);
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === loadingId) {
+            return {
+              ...msg,
+              content: '백엔드 연결에 실패했습니다. 서버가 실행 중인지 확인해주세요.',
+              traces: [{ agent: 'System', step: 'Connection error' }]
+            };
+          }
+          return msg;
+        }));
+      }
+    };
+
+    callBackend();
   };
 
   const filteredContexts = mockContexts.filter(c => 
@@ -91,6 +230,7 @@ export const ChatArea: React.FC = () => {
           {messages.map(msg => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 

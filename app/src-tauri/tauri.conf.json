@@ -12,12 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "Q-Agent HUD",
-        "width": 680,
-        "height": 180,
+        "title": "Harness Studio",
+        "width": 1200,
+        "height": 800,
         "decorations": false,
         "transparent": true,
-        "alwaysOnTop": true,
+        "resizable": true,
+        "alwaysOnTop": false,
         "center": true,
         "visible": true
       }

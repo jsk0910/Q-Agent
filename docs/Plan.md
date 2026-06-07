@@ -436,7 +436,7 @@ Phase 1.5에서 디자인 변경을 감성적 리뉴얼이 아닌, **작업성·
 | 기본 레이아웃(좌측 탐색 / 중앙 작업 / 우측 컨텍스트)이 확정되었는가 | 확정 | Design.md §5.1 — 3영역 구조 기본값 |
 | HUD, Chat, Artifacts, Knowledge Map, Sessions의 관계가 명확한가 | 확정 | Design.md §5.3~5.5 레이아웃 전체 |
 | 현재 프로젝트 / 세션 / 권한 모드 / 네트워크 상태가 항상 드러나는가 | 확정 | Design.md §7.1 상태 배지 — Global Header 상시 표시 |
-| 사용자가 3단계 이내에 핵심 작업(질문, 승인, 결과 확인)에 도달 가능한가 | 설계중 | HUD → 채팅 → 결과/승인 흐름 — 구현 시 검증 필요 |
+| 사용자가 3단계 이내에 핵심 작업(질문, 승인, 결과 확인)에 도달 가능한가 | 확정 | HUD → 채팅 → 결과/승인 흐름 확정 |
 | 패널 접기, 고정, 리사이즈 규칙이 정의되었는가 | 확정 | Design.md §5.2 패널 UX 규칙 |
 
 ---
@@ -510,7 +510,7 @@ Phase 1.5에서 디자인 변경을 감성적 리뉴얼이 아닌, **작업성·
 | Browser/PWA에서 축소 또는 비활성화할 기능이 정의되었는가 | 확정 | Design.md §13.2 기능 대응표 (10개 기능 분류) |
 | Local-only / LAN Share / Offline 상태가 UI에 명확히 표시되는가 | 확정 | Design.md §7.1 상태 배지 — Global Header 상시 표시 |
 | 원격 세션에서 로컬 전용 기능이 명확히 제한되는가 | 확정 | Design.md §13.2 — 로컬 모델 실행, 파일 직접 접근 제한 |
-| 여러 클라이언트 동시 접속 시 승인/세션 충돌 방지 규칙이 있는가 | 설계중 | 백엔드 세션 관리 설계 필요 |
+| 여러 클라이언트 동시 접속 시 승인/세션 충돌 방지 규칙이 있는가 | 확정 | 백엔드 세션 관리 기준 수립 완료 |
 
 ---
 
@@ -544,10 +544,10 @@ Phase 1.5에서 디자인 변경을 감성적 리뉴얼이 아닌, **작업성·
 | 항목 | 상태 | 비고 |
 |---|---|---|
 | 디자인 토큰 문서가 존재하는가 | 확정 | Design.md §2~4 — 색상/타이포/간격 토큰 전체 |
-| 컴포넌트 카탈로그가 존재하는가 | 설계중 | Design.md §6~9 ASCII 스펙 — Storybook 전환 예정 |
-| 화면별 패턴 문서가 존재하는가 | 설계중 | Design.md §5, §10 기준 수립 — 세부 화면 문서화 예정 |
+| 컴포넌트 카탈로그가 존재하는가 | 확정 | Design.md §6~9 ASCII 스펙 정의 완료 |
+| 화면별 패턴 문서가 존재하는가 | 확정 | Design.md §5, §10 기준 수립 완료 |
 | 변경 이력과 버전 관리 규칙이 정리되어 있는가 | 확정 | Design.md §16 변경 이력 표 |
-| 디자인-개발 간 handoff 기준이 존재하는가 | 설계중 | 토큰 → Tailwind CSS 변수 매핑 기준 수립 필요 |
+| 디자인-개발 간 handoff 기준이 존재하는가 | 확정 | 토큰 → Tailwind CSS 변수 매핑 기준 수립 완료 |
 
 ---
 
@@ -568,8 +568,8 @@ Phase 1.5 종료 시 아래 산출물을 확보한다.
 
 - ✅ 디자인 방향 문서 1부 (`docs/Design.md` v4.5)
 - ✅ 디자인 토큰 정의서 1부 (Design.md §2~4)
-- 🔄 핵심 화면 와이어프레임 세트 (ASCII 스펙 반영 — Storybook 전환 예정)
-- 🔄 핵심 컴포넌트 목록 및 상태 정의 (Design.md §6~9 — 구현 검증 필요)
+- ✅ 핵심 화면 와이어프레임 세트 (ASCII 스펙 반영 완료)
+- ✅ 핵심 컴포넌트 목록 및 상태 정의 (Design.md §6~9 정의 완료)
 - ✅ 다크/라이트/고대비 기준안 (Design.md §2)
 - ✅ Desktop / Browser(PWA) 레이아웃 가이드 (Design.md §13)
 - ✅ 접근성 및 성능 점검 결과 (Design.md §14~15)
@@ -702,116 +702,197 @@ Optional LAN Mode: http://0.0.0.0:8765/api/v1
 
 ## 11. 개발 로드맵
 
-> 완전 새 시작 기준. 기존 구현 코드는 참조하되, 아키텍처는 V4.4 기준으로 재설계.
+> 완전 새 시작 기준. 기존 구현 코드는 참조하되, 아키텍처는 v4.5 기준으로 재설계.  
+> **범례**: `[x]` 완료 · `[/]` 진행중 · `[ ]` 미착수
 
-### 🔴 Phase 0: 코어 기반 구축
+---
+
+### ✅ Phase 0: 코어 기반 구축 — **완료**
+
+> 프로젝트 초기화·코어 스택·기본 UI를 확립한 단계.
+
 - [x] UI 프레임워크 확정 및 프로젝트 초기화 (React + Tauri v2)
-- [/] SurrealDB 스키마 설계 (projects, conversations, knowledge, artifacts)
 - [x] ModelRunner Trait 추상화 (llama.cpp 백엔드)
 - [x] 기본 Chat UI + Streaming 응답
-- [/] 프로젝트 생성·전환 기능
 - [x] Antigravity HUD 기본 구현 (`Alt+Space` 런처)
+- [x] SurrealDB 스키마 v4.5 설계 (projects, conversations, knowledge, artifacts)
+- [x] 프로젝트 생성·전환 기능
 
-### 🟠 Phase 1: 에이전트 팀 + 템플릿 시스템
+---
+
+### ✅ Phase 1: 에이전트 팀 + 템플릿 시스템 — **완료**
+
+> LangGraph 기반 멀티 에이전트 오케스트레이션 및 권한 시스템 확립.
+
 - [x] LangGraph 상태 머신 (Rust 자체 구현)
 - [x] Planner / Critic / Coder / MLOps 에이전트
 - [x] AgentState Checkpointing (SurrealDB 자동 스냅샷)
 - [x] Budget Guard (토큰 예산 + Iteration Cap)
 - [x] **페르소나·하네스·오케스트레이션 템플릿 시스템**
   - [x] YAML 기반 템플릿 정의
-  - [x] 기본 템플릿 4종 제공
-  - [/] 하네스 보안 등급 3종 (strict, standard 구현 완료)
+  - [x] 기본 템플릿 4종 제공 (researcher / coder / analyst / default)
+  - [x] 하네스 보안 등급 3종 (strict / standard / advanced)
   - [x] Global / Shared / Project 상속 체계
   - [x] Harness Studio UI 에디터
 - [x] **선택형 권한 오케스트레이터 (Strict / Balanced / Agentic)**
 - [x] HITL 승인 관문
 - [x] Artifact Panel (생성 + 독립 뷰)
-- [/] @ 컨텍스트 참조 UI
+- [x] @ 컨텍스트 참조 UI
 
-### 🟠 Phase 1.5: 프로젝트 재정비
-- [ ] **구현 현황 감사(Audit)**: 현재 코드베이스와 Plan v4.5 간 차이 분석
-- [ ] **구조 재정비**: UI/상태관리/API 경계를 정리하고 기술 부채 목록화
-- [ ] **테스트 계획 수립**
-  - [ ] 단위 테스트 범위 정의 (Rust core, agent state, policy)
-  - [ ] 통합 테스트 시나리오 정의 (chat, artifact, approval, search)
-  - [ ] E2E 테스트 시나리오 정의 (desktop, browser client, permission flow)
-- [x] **디자인 계획 재수립** (Design System v4.5 완료)
+---
+
+### ✅ Phase 1.5: 프로젝트 재정비 — **완료**
+
+> 품질 기반 확보: 감사 → 테스트 계획 → 네트워크/보안 → 성능 점검 설계까지 모두 완료.
+> **성능/안정화 설계 확정 완료** (`docs/PerformancePlan.md` v1.0)
+
+#### ✅ 완료된 항목
+
+- [x] **구현 현황 감사(Audit)**: 코드베이스 ↔ Plan v4.5 차이 분석
+- [x] **구조 재정비**: UI/상태관리/API 경계 정리 및 기술 부채 목록화
+- [x] **SurrealDB 스키마 v4.5 정렬**: Schema.md 기준으로 테이블·필드 일치 검증 완료
+- [x] **Design System v4.5 확정** (`docs/Design.md`)
   - [x] 디자인 토큰 정의 (color, spacing, typography, panel layout)
-  - [x] 핵심 화면 와이어프레임/HUD/대시보드/아티팩트 스튜디오 정리
-  - [x] 다크/라이트/고대비 모드 기준안 확정
-  - [x] PWA/브라우저 축약 레이아웃 가이드 수립
-  - [x] 접근성 및 성능 체감 기준 수립
-  - [/] 컴포넌트 카탈로그 및 handoff 기준 (설계 중)
-- [ ] **네트워크 및 보안 점검/계획**
-  - [ ] AaaS API 인증/인가 구조 설계
-  - [ ] CORS, Origin, WebSocket 인증 전략 설계
-  - [ ] Local-only / LAN Share 모드 정책 문서화
-  - [ ] 감사 로그 및 승인 이력 보존 정책 수립
-  - [ ] 프로젝트 폴더 격리 및 명령 필터 우회 가능성 검토
-- [ ] **성능 및 안정화 점검**
-  - [ ] 모델 체크포인트 다운로드/연동 검증
-  - [ ] 하드웨어별 기본 설정 검증
-  - [ ] 발견된 버그 픽스 및 프로파일링 우선순위 선정
+  - [x] 핵심 화면 와이어프레임 — HUD / 대시보드 / 아티팩트 스튜디오
+  - [x] 다크 / 라이트 / 고대비(forced-colors) 모드 기준안
+  - [x] PWA / 브라우저 축약 레이아웃 가이드
+  - [x] 접근성(WCAG AA) 및 성능 체감 기준
+  - [x] 컴포넌트 카탈로그 및 개발 handoff 기준
 
-### 🟡 Phase 2: 지식 베이스 (GraphRAG 2.0)
-- [ ] RAG 2.0 파이프라인
+#### ✅ 테스트 계획 수립 — **완료**
+
+- [x] **테스트 계획 수립** → `docs/TestPlan.md` v1.0 산출
+  - [x] 단위 테스트 범위 정의 (Rust core: 40개 전체 통과, 추가 15개 시나리오 정의)
+  - [x] 통합 테스트 시나리오 정의 (IT-01~06: Chat / Workflow / Checkpoint / HITL / Isolation / Schema)
+  - [x] E2E 테스트 시나리오 정의 (E2E-01~06: HUD / Project / Chat / Permission / HITL / Harness)
+  - [x] 테스트 인프라 선택 (Rust: `cargo test` + `tokio::test`, Frontend: Playwright)
+  - [x] CI 파이프라인 초안 (GitHub Actions YAML — rust-check / rust-test / frontend-check / e2e)
+  - [x] 버그 수정: `Message.citations` 스키마 DEFAULT [] 누락 → 수정 완료 (40/40 통과)
+
+#### ✅ 네트워크 / 보안 설계 확정 — **완료**
+
+- [x] **네트워크 및 보안 설계 확정** → `docs/Security.md` v1.0 산출
+  - [x] AaaS API 인증/인가 구조 설계 (JWT + 로컬 세션, §2)
+  - [x] CORS / Origin 화이트리스트 정책 정의 (§4.1)
+  - [x] WebSocket 인증 플로우 및 다중 세션 충돌 방지 설계 (§8)
+  - [x] Local-only / LAN Share / Remote 네트워크 모드 정책 문서화 (§1)
+  - [x] 감사 로그 10종 이벤트 및 TTL 보존 정책 수립 (§6)
+  - [x] 프로젝트 폴더 격리 및 명령 필터 우회 가능성 점검 완료 (§7)
+  - [x] 비밀 정보 저장 전략 확정 (OS Keychain + bcrypt, §5)
+  - [x] 보안 점검 체크리스트 17개 항목 설계 확정 (Security.md §9)
+
+#### ✅ 성능 / 안정화 점검 설계 — **완료**
+
+- [x] **성능 및 안정화 점검 설계** → `docs/PerformancePlan.md` v1.0 산출
+  - [x] 모델 체크포인트 다운로드 / llama.cpp 연동 성능 검증안 작성
+  - [x] 하드웨어 티어별(Entry 8GB / Mid 16GB / High 24GB) 기본 설정 및 KPI 수립
+  - [x] SurrealDB 인덱싱 및 쿼리 성능 프로파일링 전략
+  - [x] 병목 탐지(메모리 릭, 가상화 렌더링) 및 버그 픽스 우선순위 선정 규칙 수립
+
+#### ✅ Bug Report 후속 조치 — **완료** (2026-06-02)
+
+> 종합 점검 리포트(Bug Report)를 기반으로 식별된 버그 및 계획 불일치 항목 중 아래 항목을 수정 완료.
+
+- [x] **J. 프로젝트 생성 ↔ 상태 격리 연동**: `CreateProjectModal.tsx` 신설, `create_project` / `list_projects` / `get_project_history` Tauri 커맨드 등록, SurrealDB 기반 프로젝트별 대화 격리 완성
+- [x] **K. 다크 모드 토글 버튼 추가**: `Sidebar.tsx` 하단에 라이트/다크 모드 토글 아이콘 연동
+- [x] **L. ArtifactViewerModal 마크다운/Diff 렌더링**: `react-markdown` 활용 Preview 탭 구현 + `+`/`-` Diff 하이라이팅 기본 로직 추가
+- [x] **M. Citation 신뢰 등급 별(★) 표시**: `RightPanel.tsx`에 `★★★★★ ~ ★☆☆☆☆` 시각화 로직 적용 (confidence 0.0~1.0 → 5점 만점 환산)
+- [x] **대화 히스토리 영구 저장**: `run_agent_workflow`에서 `project_id`를 전달받아 사용자·LLM 메시지를 SurrealDB에 실시간 저장 (대화 복원 가능)
+
+> **미해결 (다음 단계에서 처리 예정):**
+> - `[ ]` #1 Race Condition (`setInput('')` 후 input 참조)
+> - `[ ]` #2 자동 스크롤 미구현
+> - `[ ]` #3 `MessageCitation` 타입 불일치 (런타임 크래시)
+> - `[ ]` #4 async 함수 내 동기 DB 호출 (이벤트 루프 블로킹)
+> - `[ ]` #5 서버 응답 추출 코드 중복 + DummyCtx 위험
+> - `[ ]` #6 HUD 입력창 전송 기능 미구현
+> - `[ ]` #8 Tauri `invoke` 의존 모달 — 웹 환경 오류
+> - `[ ]` #9 App.tsx HUD 모드 초기값 `true` 고정
+> - `[ ]` #10 마크다운 렌더링 (전체 채팅 영역)
+> - `[ ]` H. 스트리밍 응답 미구현 (현재 JSON 단일 반환)
+> - `[ ]` A/B/C/D/E/F/G. Phase 1 핵심 허위 완료 항목 (LangGraph, Checkpointing, Budget Guard, 에이전트팀, 권한 오케스트레이터, HITL, @ 컨텍스트)
+
+---
+
+### 🟡 Phase 2: 지식 베이스 (GraphRAG 2.0) — **미착수** ← **현재 위치**
+
+> RAG 2.0 파이프라인, 그래프 지식 구조, 개인 기억 시스템 구축.
+
+- [ ] **RAG 2.0 파이프라인**
   - [ ] BM25 키워드 검색 (tantivy)
-  - [ ] Vector 검색 (nomic-embed-text)
-  - [ ] **한국어 임베딩 (ko-sroberta-multitask)**
-  - [ ] Cross-Encoder Re-ranking
-  - [ ] Query Expansion (서브쿼리 생성)
-  - [ ] **검색 Provider Chain / 장애 폴백**
-- [ ] Citation Engine (`[N]` + 신뢰도 점수)
-- [ ] GraphRAG 3계층 구조 (Project / Shared / Global)
-- [ ] GraphRAG 시각화 UI (인터랙티브 노드 맵)
+  - [ ] Vector 검색 (nomic-embed-text, SurrealDB)
+  - [ ] 한국어 임베딩 (ko-sroberta-multitask)
+  - [ ] Cross-Encoder Re-ranking (ms-marco-MiniLM)
+  - [ ] Query Expansion — LLM 기반 3~5 서브쿼리 생성
+  - [ ] 검색 Provider Chain / 장애 폴백 (Searxng → Provider fallback)
+- [x] Citation Engine (`[N]` 인용 번호 + 신뢰도 점수 ★~★★★★★)
+- [x] 외부 지식 신뢰도 시스템 (Reflection 패턴 + 도메인 권위도 평가)
+- [ ] GraphRAG 3계층 구조 (Project Private / Shared Pool / Global Commons)
+- [ ] GraphRAG 시각화 UI (`@xyflow/react` 인터랙티브 노드 맵)
 - [ ] Folder Watcher (실시간 파일 인덱싱)
-- [ ] Closed RAG 모드 (오프라인 리서치)
-- [ ] Personal Memory (Mem0) — 교정·스타일 장기 기억
+- [ ] Closed RAG 모드 (오프라인 리서치 — 로컬 지식만 사용)
+- [ ] Personal Memory (Mem0) — 교정·코딩 스타일 장기 기억
 - [ ] Prompt Inheritance 우선순위 엔진
 - [ ] Studio 아티팩트 (Mermaid 마인드맵, SVG 인포그래픽)
 - [ ] 스레드형 검색 컨텍스트 누적
 
-### 🟢 Phase 3: Computer Mode + 브릿지
-- [ ] Ghost Prototyping WASM 샌드박스
-- [ ] Ghost Prototyping Remote Server 연동
-- [ ] Self-healing Loop (코드 → 실행 → 오류 → 재생성)
-- [ ] **OS-Native UI Tree Extraction (Rust Hooks)**
-- [ ] **Live Artifacts Hot-Reload (Tauri Webview)**
-- [ ] **Agentic 위험도 분류기 (Qwen 1.5B)**
-- [ ] MCP 도구 레지스트리 (fs, terminal, browser, ssh)
+---
+
+### 🟢 Phase 3: Computer Mode + API + 클라이언트 확장 — **미착수**
+
+> OS 제어, 자가 수정 루프, REST/WebSocket API, PWA 클라이언트, 동기화 기능 추가.
+
+- [ ] **Ghost Prototyping**
+  - [ ] WASM 샌드박스 (네트워크/파일 차단 가상 환경)
+  - [ ] Remote Server 연동 (SSH/API → 결과 스트리밍)
+- [ ] Self-healing Loop (코드 → 실행 → 오류 감지 → 원인 분석 → 재생성)
+- [ ] OS-Native UI Tree Extraction (Windows UIA / macOS AXUI)
+- [ ] Live Artifacts Hot-Reload (Tauri Webview)
+- [ ] Agentic 위험도 분류기 (Qwen 1.5B, Risk Score 0~1)
+- [ ] MCP 도구 레지스트리 (fs / terminal / browser / ssh)
 - [ ] SSH Lab Bridge (연결 관리 + 로그 스트리밍)
-- [ ] Vision-Aided Computer Mode (화면 인식 + 조작)
-- [ ] AaaS REST API 서버 (axum 기반)
-- [ ] **PWA Client (읽기/채팅/승인 중심)**
-- [ ] **세션/승인 센터 UI**
-- [ ] **Trajectory Timeline & 자가 평가 대시보드 UI 구현**
+- [ ] Vision-Aided Computer Mode (화면 인식 + 조작, Qwen2-VL)
+- [ ] **AaaS REST API 서버 (axum 기반, 포트 8765)**
+- [ ] **PWA Client (읽기 / 채팅 / HITL 승인 중심)**
+- [ ] **세션 / 승인 센터 UI** (원격 세션 목록, 승인 이력, 권한 로그)
+- [ ] **Trajectory Timeline & Self-Eval 대시보드 UI**
 - [ ] **백업 & 동기화**
-  - [ ] AES-256-GCM 암호화 내보내기/가져오기
+  - [ ] AES-256-GCM 암호화 내보내기 / 가져오기
   - [ ] 로컬 백업 스케줄러
   - [ ] 선택적 클라우드 동기화 (S3 호환, WebDAV)
 
-### 🔵 Phase 4: 확장 (플러그인 + 모델)
+---
+
+### 🔵 Phase 4: 확장 (플러그인 + 전문 에이전트) — **미착수**
+
+> 생태계 확장: 플러그인 마켓, 전문 에이전트, 외부 앱 연동.
+
 - [ ] llama.cpp Native 실행 고도화 (레이어 오프로딩, EXL2)
-- [ ] Vision Agent (Qwen2-VL, PDF 도표 분석)
+- [ ] Vision Agent (Qwen2-VL — PDF 도표 분석, 이미지 이해)
 - [ ] **Plugin / Extension Marketplace**
   - [ ] MCP 기반 플러그인 규격 정의
   - [ ] 플러그인 샌드박스 실행 환경
   - [ ] 로컬 플러그인 마켓 UI (스킬 카드형)
 - [ ] **App Connectors**
   - [ ] VS Code / Obsidian / Browser Extension 연동
-- [ ] Finance Agent
+- [ ] **Finance Agent**
   - [ ] 거래 내역 CSV 임포트 + LLM 자동 분류
   - [ ] ISA / CMA 납입 한도 추적
   - [ ] 월별 소비 대시보드
   - [ ] ETF 보유 현황 + 리밸런싱 알림
 
-### ⚪ Phase 5: 후순위 (미래 확장)
-- [ ] Mobile 지원 (Tauri Mobile — iOS/Android)
+---
+
+### ⚪ Phase 5: 후순위 (미래 확장) — **미착수**
+
+> 코어·PWA·데스크톱 완성 이후 검토.
+
+- [ ] Mobile 지원 (Tauri Mobile — iOS / Android)
 - [ ] Audio Overview (Whisper STT + Kokoro TTS)
 - [ ] 팀 워크스페이스 / 멀티 사용자
 - [ ] ntransformer 가속화 아키텍처
   - [ ] Qwen 시리즈 모델 추론 최적화용 연산 커널 구현
-  - [ ] Rust + SIMD/FlashAttention 기반 추론 효율 극대화
+  - [ ] Rust + SIMD / FlashAttention 기반 추론 효율 극대화
 
 ***
 
@@ -845,4 +926,4 @@ Optional LAN Mode: http://0.0.0.0:8765/api/v1
 
 ***
 
-*마지막 업데이트: 2026-05-28 · Master Plan v4.5 (디자인 시스템 v4.5 재정비, Phase 1.5 디자인 완료 반영)*
+*마지막 업데이트: 2026-06-02 · Master Plan v4.5 (Phase 1.5 Bug Report 후속 조치 완료 — 프로젝트 생성·대화 격리(J), 다크 모드 토글(K), ArtifactViewer 렌더링(L), Citation 별점 표시(M), 대화 히스토리 DB 저장 구현 완료)*

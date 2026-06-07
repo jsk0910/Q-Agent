@@ -5,17 +5,38 @@ import { Hud } from './components/layout/Hud';
 import { HitlModal } from './components/harness/HitlModal';
 
 function App() {
-  const [isHudMode, setIsHudMode] = useState(true);
+  const [isHudMode, setIsHudMode] = useState(false);
 
   useEffect(() => {
-    // 간단한 반응형 크기 감지로 모드 전환 (HUD는 680px)
+    // 윈도우 크기에 따른 초기 HUD 모드 설정
     const handleResize = () => {
-      setIsHudMode(window.innerWidth < 800);
+      if (window.innerHeight < 250) {
+         setIsHudMode(true);
+      }
     };
-    
     handleResize();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    // Alt+Space 단축키로 HUD 모드 토글
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === 'Space') {
+        e.preventDefault();
+        setIsHudMode((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    // HUD에서 메시지 전송 시 대시보드로 자동 전환
+    const handleHudExpand = () => {
+      setIsHudMode(false);
+    };
+    window.addEventListener('hud-expand', handleHudExpand);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('hud-expand', handleHudExpand);
+    };
   }, []);
 
   return (

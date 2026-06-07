@@ -1,5 +1,5 @@
 use anyhow::Result;
-use surrealdb::engine::local::{Db, Mem};
+use surrealdb::engine::local::{Db, Mem, SurrealKv};
 use surrealdb::Surreal;
 
 pub mod checkpoint;
@@ -15,7 +15,11 @@ pub struct Database {
 impl Database {
     /// 로컬 데이터베이스 초기화 (개발 중에는 메모리, 프로덕션은 파일 사용 가능)
     pub async fn init(path: &str) -> Result<Self> {
-        let client = Surreal::new::<Mem>(()).await?;
+        let client = if path == "memory" {
+            Surreal::new::<Mem>(()).await?
+        } else {
+            Surreal::new::<SurrealKv>(path).await?
+        };
 
         // 네임스페이스 및 데이터베이스 선택
         client.use_ns("qagent").use_db("core").await?;

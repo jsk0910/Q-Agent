@@ -1,5 +1,6 @@
 pub mod manager;
 pub mod entities;
+pub mod llama;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -31,6 +32,7 @@ pub trait ModelRunner: Send + Sync {
 }
 
 pub struct MockLlamaRunner;
+pub use llama::RealLlamaRunner;
 
 #[async_trait::async_trait]
 impl ModelRunner for MockLlamaRunner {
@@ -76,5 +78,72 @@ impl ModelRunner for MockLlamaRunner {
 
     fn model_id(&self) -> &str {
         "mock-llama-3b"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_mock_generate_returns_string() {
+        let runner = MockLlamaRunner;
+        let req = ModelRequest { prompt: "hello".into(), max_tokens: 50 };
+        let result = runner.generate(req).await.unwrap();
+        assert!(!result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_mock_embed_returns_vector() {
+        let runner = MockLlamaRunner;
+        let embedding = runner.embed("test text").await.unwrap();
+        assert_eq!(embedding.len(), 3);
+        assert_eq!(embedding[0], 0.1_f32);
+    }
+
+    #[test]
+    fn test_mock_model_metadata() {
+        let runner = MockLlamaRunner;
+        assert_eq!(runner.model_id(), "mock-llama-3b");
+        assert_eq!(runner.context_window(), 8192);
+        assert!(!runner.supports_vision());
+    }
+
+    #[tokio::test]
+    async fn test_mock_generate_stream_emits_tokens() {
+        let runner = MockLlamaRunner;
+        let req = ModelRequest { prompt: "stream test".into(), max_tokens: 100 };
+        let mut rx = runner.generate_stream(req).await.unwrap();
+        let mut tokens = Vec::new();
+        while let Some(Ok(event)) = rx.recv().await {
+            tokens.push(event.token);
+        }
+        assert!(!tokens.is_empty());
+        assert_eq!(tokens[0], "Hello");
+        // 마지막 토큰은 프롬프트 길이 포함
+        let last = tokens.last().unwrap();
+        assert!(last.contains("Prompt len"));
+    }
+
+    #[tokio::test]
+    async fn test_mock_stream_prompt_length_reflected() {
+        let runner = MockLlamaRunner;
+        let prompt = "a".repeat(42);
+        let req = ModelRequest { prompt, max_tokens: 10 };
+        let mut rx = runner.generate_stream(req).await.unwrap();
+        let mut last_token = String::new();
+        while let Some(Ok(event)) = rx.recv().await {
+            last_token = event.token;
+        }
+        assert!(last_token.contains("42"), "Prompt length should be reflected in stream: {}", last_token);
+    }
+
+    #[tokio::test]
+    async fn test_model_request_serde() {
+        let req = ModelRequest { prompt: "test".into(), max_tokens: 128 };
+        let json = serde_json::to_string(&req).unwrap();
+        let restored: ModelRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.prompt, "test");
+        assert_eq!(restored.max_tokens, 128);
     }
 }

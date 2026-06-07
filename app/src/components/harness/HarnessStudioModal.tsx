@@ -21,6 +21,11 @@ export const HarnessStudioModal: React.FC<HarnessStudioModalProps> = ({ isOpen, 
   }, [isOpen, category]);
 
   const loadTemplates = async (cat: string) => {
+    if (!('__TAURI_INTERNALS__' in window)) {
+      setTemplates(["mock_template"]);
+      setSelectedTemplate("mock_template");
+      return;
+    }
     try {
       const list = await invoke<string[]>('list_templates', { category: cat });
       setTemplates(list);
@@ -42,6 +47,10 @@ export const HarnessStudioModal: React.FC<HarnessStudioModalProps> = ({ isOpen, 
   }, [selectedTemplate]);
 
   const loadContent = async (name: string) => {
+    if (!('__TAURI_INTERNALS__' in window)) {
+      setYamlContent("# Mock YAML content\nname: " + name);
+      return;
+    }
     try {
       const content = await invoke<string>('get_template_content', { category, name });
       setYamlContent(content);
@@ -53,6 +62,13 @@ export const HarnessStudioModal: React.FC<HarnessStudioModalProps> = ({ isOpen, 
   const handleSave = async () => {
     if (!selectedTemplate) return;
     setSaving(true);
+    if (!('__TAURI_INTERNALS__' in window)) {
+      setTimeout(() => {
+        setSaving(false);
+        alert('Template saved successfully! (Mock)');
+      }, 500);
+      return;
+    }
     try {
       await invoke('save_template_content', { category, name: selectedTemplate, content: yamlContent });
       alert('Template saved successfully!');

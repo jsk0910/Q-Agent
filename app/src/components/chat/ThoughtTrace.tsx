@@ -1,31 +1,33 @@
-import React from 'react';
-import { Bot, User, ChevronRight, ChevronDown } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface ThoughtTraceProps {
   traces: { agent: string; step: string }[];
 }
 
 export const ThoughtTrace: React.FC<ThoughtTraceProps> = ({ traces }) => {
-  const [expanded, setExpanded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (!traces || traces.length === 0) return null;
 
   return (
-    <div className="mb-4">
+    <div className="mb-2">
       <button 
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)} 
+        className="flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
       >
-        {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        <span>Thought Trace ({traces.length} steps)</span>
+        <span>📍 {traces[0].agent}</span>
+        {traces.length > 1 && <span>→ {traces[traces.length - 1].agent}</span>}
+        <span className="text-[var(--accent-primary)] font-medium">
+          {isExpanded ? '▾' : '▸'} {isExpanded ? '접기' : '펼치기'}
+        </span>
       </button>
       
-      {expanded && (
-        <div className="mt-2 pl-6 space-y-2 border-l-2 border-[var(--border)] ml-2">
+      {isExpanded && (
+        <div className="space-y-1.5 mt-2 mb-3 pl-3 border-l-2 border-[var(--border)] animate-in fade-in slide-in-from-top-1 duration-200">
           {traces.map((trace, idx) => (
-            <div key={idx} className="flex items-start gap-2 text-xs">
-              <span className="font-semibold text-[var(--accent-primary)]">{trace.agent}</span>
-              <span className="text-[var(--text-secondary)]">→</span>
+            <div key={idx} className="text-xs text-[var(--text-muted)]">
+              <span className="font-medium text-[var(--text-secondary)]">{trace.agent}</span>
+              <span className="mx-1">→</span>
               <span className="text-[var(--text-primary)]">{trace.step}</span>
             </div>
           ))}

@@ -1,9 +1,7 @@
 services:
   # 1. Llama.cpp 서버 (GPU 가속 활성화)
   llama-server:
-    build:
-      context: https://github.com/ggml-org/llama.cpp.git
-      dockerfile: .devops/cuda.Dockerfile
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
     container_name: q-agent-engine
     ports:
       - "8080:8080"
@@ -44,6 +42,21 @@ services:
     depends_on:
       - llama-server
       - searxng
+      - surrealdb
     environment:
       - LLAMA_API_URL=http://llama-server:8080/v1
       - SEARXNG_URL=http://searxng:8080
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASS=root
+      - SURREAL_NS=qagent
+      - SURREAL_DB=qagent
+
+  # 4. SurrealDB (데이터베이스)
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    container_name: q-agent-db
+    ports:
+      - "8001:8000"
+    command: start --log trace --user root --pass root memory
+    restart: always
